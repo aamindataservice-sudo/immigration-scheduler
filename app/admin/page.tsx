@@ -987,130 +987,149 @@ export default function AdminPage() {
         {/* Dashboard Home View */}
         {!activeSection && (
           <>
-        {/* Dashboard Cards - Clickable */}
+        {/* Dashboard Cards - Exciting New Design */}
         <div className="dashboard-cards">
           {/* Users Summary Card */}
-          <div className="summary-card users-card clickable-card" onClick={() => navigateToSection("users", "left")}>
-            <div className="card-header-row">
-              <div className="card-icon purple">👥</div>
-              <div className="card-title-group">
-                <span className="card-title">Users Overview</span>
-                <span className="card-subtitle">Tap to manage users</span>
+          <div className="glass-card users-card" onClick={() => navigateToSection("users", "left")}>
+            <div className="card-glow users-glow"></div>
+            <div className="card-content">
+              <div className="card-icon-wrapper">
+                <div className="card-icon-bg users-icon-bg">
+                  <span className="card-icon-emoji">👥</span>
+                </div>
+                <div className="card-badge">{dashboardStats.totalUsers}</div>
               </div>
-              <span className="card-arrow">→</span>
-            </div>
-            <div className="card-stats-grid">
-              <div className="mini-stat">
-                <span className="mini-value">{dashboardStats.totalUsers}</span>
-                <span className="mini-label">Total</span>
+              <h3 className="card-title">Team Members</h3>
+              <p className="card-subtitle">Manage your workforce</p>
+              <div className="stats-row">
+                <div className="stat-pill admin">
+                  <span className="stat-icon">👑</span>
+                  <span className="stat-value">{dashboardStats.admins}</span>
+                  <span className="stat-label">Admin</span>
+                </div>
+                <div className="stat-pill active">
+                  <span className="stat-icon">✅</span>
+                  <span className="stat-value">{dashboardStats.activeOfficers}</span>
+                  <span className="stat-label">Active</span>
+                </div>
+                <div className="stat-pill inactive">
+                  <span className="stat-icon">💤</span>
+                  <span className="stat-value">{dashboardStats.inactiveOfficers}</span>
+                  <span className="stat-label">Off</span>
+                </div>
               </div>
-              <div className="mini-stat">
-                <span className="mini-value">{dashboardStats.admins}</span>
-                <span className="mini-label">Admins</span>
+              <div className="card-action">
+                <span>Manage Users</span>
+                <span className="action-arrow">→</span>
               </div>
-              <div className="mini-stat highlight-green">
-                <span className="mini-value">{dashboardStats.activeOfficers}</span>
-                <span className="mini-label">Active</span>
-              </div>
-              <div className="mini-stat highlight-red">
-                <span className="mini-value">{dashboardStats.inactiveOfficers}</span>
-                <span className="mini-label">Inactive</span>
-              </div>
-            </div>
-            <div className="card-footer">
-              <span className="footer-text">👮 {dashboardStats.totalOfficers} officers registered</span>
             </div>
           </div>
 
           {/* Schedule Summary Card */}
-          <div className="summary-card schedule-card clickable-card" onClick={() => navigateToSection("schedule", "left")}>
-            <div className="card-header-row">
-              <div className="card-icon blue">📆</div>
-              <div className="card-title-group">
-                <span className="card-title">{getScheduleViewLabel()}</span>
-                <span className="card-subtitle">Tap to view schedule</span>
+          <div className="glass-card schedule-card" onClick={() => navigateToSection("schedule", "left")}>
+            <div className="card-glow schedule-glow"></div>
+            <div className="card-content">
+              <div className="card-icon-wrapper">
+                <div className="card-icon-bg schedule-icon-bg">
+                  <span className="card-icon-emoji">📆</span>
+                </div>
+                <div className="card-badge pulse">{dashboardStats.workingToday}</div>
               </div>
-              <span className="card-arrow">→</span>
-            </div>
-            <div className="card-stats-grid">
-              <div className="mini-stat highlight-yellow">
-                <span className="mini-value">{dashboardStats.morningShifts}</span>
-                <span className="mini-label">🌅 Morning</span>
+              <h3 className="card-title">{getScheduleViewLabel()}</h3>
+              <p className="card-subtitle">Live shift overview</p>
+              <div className="shift-grid">
+                <div className="shift-item morning">
+                  <span className="shift-icon">🌅</span>
+                  <span className="shift-count">{dashboardStats.morningShifts}</span>
+                  <span className="shift-label">Morning</span>
+                </div>
+                <div className="shift-item afternoon">
+                  <span className="shift-icon">🌇</span>
+                  <span className="shift-count">{dashboardStats.afternoonShifts}</span>
+                  <span className="shift-label">Afternoon</span>
+                </div>
+                <div className="shift-item fulltime">
+                  <span className="shift-icon">⏰</span>
+                  <span className="shift-count">{dashboardStats.fulltimeShifts}</span>
+                  <span className="shift-label">Full-Time</span>
+                </div>
+                <div className="shift-item dayoff">
+                  <span className="shift-icon">🏠</span>
+                  <span className="shift-count">{dashboardStats.offToday}</span>
+                  <span className="shift-label">Day Off</span>
+                </div>
               </div>
-              <div className="mini-stat highlight-orange">
-                <span className="mini-value">{dashboardStats.afternoonShifts}</span>
-                <span className="mini-label">🌇 Afternoon</span>
+              <div className="card-action">
+                <span>View Schedule</span>
+                <span className="action-arrow">→</span>
               </div>
-              <div className="mini-stat highlight-blue">
-                <span className="mini-value">{dashboardStats.fulltimeShifts}</span>
-                <span className="mini-label">⏰ Full-Time</span>
-              </div>
-              <div className="mini-stat highlight-gray">
-                <span className="mini-value">{dashboardStats.offToday}</span>
-                <span className="mini-label">🏠 Off</span>
-              </div>
-            </div>
-            <div className="card-footer">
-              <span className="footer-text">✅ {dashboardStats.workingToday} working • 🏠 {dashboardStats.offToday} off</span>
             </div>
           </div>
 
           {/* Patterns Summary Card */}
-          <div className="summary-card patterns-card clickable-card" onClick={() => navigateToSection("patterns", "left")}>
-            <div className="card-header-row">
-              <div className="card-icon green">📋</div>
-              <div className="card-title-group">
-                <span className="card-title">Weekly Patterns</span>
-                <span className="card-subtitle">Tap to manage patterns</span>
+          <div className="glass-card patterns-card" onClick={() => navigateToSection("patterns", "left")}>
+            <div className="card-glow patterns-glow"></div>
+            <div className="card-content">
+              <div className="card-icon-wrapper">
+                <div className="card-icon-bg patterns-icon-bg">
+                  <span className="card-icon-emoji">📋</span>
+                </div>
+                <div className="card-badge">{dashboardStats.totalPatterns}</div>
               </div>
-              <span className="card-arrow">→</span>
-            </div>
-            <div className="card-stats-grid">
-              <div className="mini-stat highlight-yellow">
-                <span className="mini-value">{dashboardStats.dayOffPatterns}</span>
-                <span className="mini-label">🏠 Day-Off</span>
+              <h3 className="card-title">Weekly Patterns</h3>
+              <p className="card-subtitle">Recurring schedules</p>
+              <div className="pattern-stats">
+                <div className="pattern-item">
+                  <div className="pattern-bar dayoff-bar" style={{width: `${Math.min(100, (dashboardStats.dayOffPatterns / Math.max(1, dashboardStats.totalPatterns)) * 100)}%`}}></div>
+                  <span className="pattern-label">🏠 Day-Off</span>
+                  <span className="pattern-value">{dashboardStats.dayOffPatterns}</span>
+                </div>
+                <div className="pattern-item">
+                  <div className="pattern-bar fulltime-bar" style={{width: `${Math.min(100, (dashboardStats.fullTimePatterns / Math.max(1, dashboardStats.totalPatterns)) * 100)}%`}}></div>
+                  <span className="pattern-label">⏰ Full-Time</span>
+                  <span className="pattern-value">{dashboardStats.fullTimePatterns}</span>
+                </div>
+                <div className="pattern-item">
+                  <div className="pattern-bar vacation-bar" style={{width: `${Math.min(100, (dashboardStats.activeVacations / Math.max(1, dashboardStats.totalPatterns)) * 100)}%`}}></div>
+                  <span className="pattern-label">🏖️ Vacation</span>
+                  <span className="pattern-value">{dashboardStats.activeVacations}</span>
+                </div>
               </div>
-              <div className="mini-stat highlight-blue">
-                <span className="mini-value">{dashboardStats.fullTimePatterns}</span>
-                <span className="mini-label">⏰ Full-Time</span>
+              <div className="card-action">
+                <span>Edit Patterns</span>
+                <span className="action-arrow">→</span>
               </div>
-              <div className="mini-stat highlight-pink">
-                <span className="mini-value">{dashboardStats.lockedPatterns}</span>
-                <span className="mini-label">🔒 Locked</span>
-              </div>
-              <div className="mini-stat highlight-green">
-                <span className="mini-value">{dashboardStats.activeVacations}</span>
-                <span className="mini-label">🏖️ Vacation</span>
-              </div>
-            </div>
-            <div className="card-footer">
-              <span className="footer-text">📊 {dashboardStats.totalPatterns} total patterns</span>
             </div>
           </div>
 
           {/* Available Today Card */}
-          <div className="summary-card available-card clickable-card" onClick={() => navigateToSection("schedule", "left")}>
-            <div className="card-header-row">
-              <div className="card-icon teal">✅</div>
-              <div className="card-title-group">
-                <span className="card-title">Available Today</span>
-                <span className="card-subtitle">Tap to assign shifts</span>
+          <div className="glass-card available-card" onClick={() => navigateToSection("schedule", "left")}>
+            <div className="card-glow available-glow"></div>
+            <div className="card-content">
+              <div className="available-hero">
+                <div className="available-ring">
+                  <div className="available-number">{availableCount}</div>
+                </div>
+                <div className="available-label">Officers Ready</div>
               </div>
-              <span className="card-arrow">→</span>
-            </div>
-            <div className="available-big-stat">
-              <span className="big-number">{availableCount}</span>
-              <span className="big-label">Officers Available</span>
-            </div>
-            <div className="formula-row">
-              <div className="formula-item">
-                <span className="formula-value">{Math.ceil((availableCount * 3) / 5)}</span>
-                <span className="formula-label">Morning (3/5)</span>
+              <div className="distribution-row">
+                <div className="distribution-item">
+                  <div className="distribution-icon">🌅</div>
+                  <div className="distribution-value">{Math.ceil((availableCount * 3) / 5)}</div>
+                  <div className="distribution-label">Morning</div>
+                  <div className="distribution-percent">60%</div>
+                </div>
+                <div className="distribution-divider"></div>
+                <div className="distribution-item">
+                  <div className="distribution-icon">🌇</div>
+                  <div className="distribution-value">{Math.floor((availableCount * 2) / 5)}</div>
+                  <div className="distribution-label">Afternoon</div>
+                  <div className="distribution-percent">40%</div>
+                </div>
               </div>
-              <div className="formula-divider">|</div>
-              <div className="formula-item">
-                <span className="formula-value">{Math.floor((availableCount * 2) / 5)}</span>
-                <span className="formula-label">Afternoon (2/5)</span>
+              <div className="card-action highlight">
+                <span>Assign Now</span>
+                <span className="action-arrow">→</span>
               </div>
             </div>
           </div>
@@ -4260,140 +4279,444 @@ export default function AdminPage() {
           padding: 0 20px 20px;
         }
 
-        /* Dashboard Cards */
+        /* Dashboard Cards - Exciting Design */
         .dashboard-cards {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 20px;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 16px;
           margin-bottom: 24px;
         }
 
-        .summary-card {
-          background: white;
-          border-radius: 16px;
-          padding: 20px;
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-          border: 1px solid #e2e8f0;
-          text-decoration: none;
-          display: block;
-        }
-
-        .clickable-card {
+        .glass-card {
+          position: relative;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(20px);
+          border-radius: 24px;
+          padding: 0;
+          overflow: hidden;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          border: 1px solid rgba(255, 255, 255, 0.5);
+          box-shadow: 
+            0 4px 24px rgba(0, 0, 0, 0.06),
+            0 1px 2px rgba(0, 0, 0, 0.04);
         }
 
-        .clickable-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
-          border-color: #667eea;
+        .glass-card:hover {
+          transform: translateY(-8px) scale(1.02);
+          box-shadow: 
+            0 20px 40px rgba(0, 0, 0, 0.12),
+            0 8px 16px rgba(0, 0, 0, 0.08);
         }
 
-        .clickable-card:active {
-          transform: translateY(-2px);
+        .glass-card:active {
+          transform: translateY(-4px) scale(1.01);
         }
 
-        .card-arrow {
-          font-size: 1.25rem;
-          color: #a0aec0;
-          transition: transform 0.2s;
+        .card-glow {
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          opacity: 0;
+          transition: opacity 0.4s ease;
+          pointer-events: none;
         }
 
-        .clickable-card:hover .card-arrow {
-          transform: translateX(4px);
-          color: #667eea;
+        .glass-card:hover .card-glow {
+          opacity: 1;
         }
 
-        .card-header-row {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 16px;
+        .users-glow {
+          background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
         }
 
-        .card-icon {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.5rem;
+        .schedule-glow {
+          background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 50%);
         }
 
-        .card-icon.purple { background: #e9d8fd; }
-        .card-icon.blue { background: #bee3f8; }
-        .card-icon.green { background: #c6f6d5; }
-        .card-icon.teal { background: #b2f5ea; }
-        .card-icon.orange { background: #feebc8; }
-
-        .card-title-group {
-          flex: 1;
+        .patterns-glow {
+          background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 50%);
         }
 
-        .card-title {
-          display: block;
-          font-weight: 700;
-          color: #1a365d;
-          font-size: 15px;
+        .available-glow {
+          background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, transparent 50%);
         }
 
-        .card-subtitle {
-          font-size: 12px;
-          color: #718096;
+        .card-content {
+          position: relative;
+          padding: 20px;
+          z-index: 1;
         }
 
-        .card-stats-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 8px;
+        .card-icon-wrapper {
+          position: relative;
+          display: inline-block;
           margin-bottom: 12px;
         }
 
-        .mini-stat {
-          text-align: center;
-          padding: 10px 8px;
-          background: #f7fafc;
-          border-radius: 10px;
+        .card-icon-bg {
+          width: 56px;
+          height: 56px;
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.75rem;
+          transition: transform 0.3s ease;
         }
 
-        .mini-stat.highlight-green { background: #c6f6d5; }
-        .mini-stat.highlight-red { background: #fed7d7; }
-        .mini-stat.highlight-yellow { background: #fefcbf; }
-        .mini-stat.highlight-orange { background: #feebc8; }
-        .mini-stat.highlight-blue { background: #bee3f8; }
-        .mini-stat.highlight-pink { background: #fed7e2; }
-        .mini-stat.highlight-gray { background: #edf2f7; }
+        .glass-card:hover .card-icon-bg {
+          transform: scale(1.1) rotate(-5deg);
+        }
 
-        .mini-value {
-          display: block;
-          font-size: 1.25rem;
+        .users-icon-bg {
+          background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+          box-shadow: 0 8px 16px rgba(139, 92, 246, 0.3);
+        }
+
+        .schedule-icon-bg {
+          background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+          box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+        }
+
+        .patterns-icon-bg {
+          background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+          box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3);
+        }
+
+        .card-icon-emoji {
+          filter: brightness(0) invert(1);
+          font-size: 1.5rem;
+        }
+
+        .card-badge {
+          position: absolute;
+          top: -6px;
+          right: -6px;
+          min-width: 24px;
+          height: 24px;
+          padding: 0 6px;
+          background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+          border-radius: 12px;
+          color: white;
+          font-size: 12px;
           font-weight: 700;
-          color: #1a365d;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 8px rgba(244, 63, 94, 0.4);
+          border: 2px solid white;
         }
 
-        .mini-label {
+        .card-badge.pulse {
+          animation: badgePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes badgePulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+
+        .glass-card .card-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0 0 4px;
+          display: block;
+        }
+
+        .glass-card .card-subtitle {
+          font-size: 13px;
+          color: #64748b;
+          margin-bottom: 16px;
+          display: block;
+        }
+
+        /* Stats Row for Users Card */
+        .stats-row {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+
+        .stat-pill {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 10px 8px;
+          border-radius: 12px;
+          background: #f8fafc;
+          transition: all 0.2s ease;
+        }
+
+        .stat-pill:hover {
+          transform: translateY(-2px);
+        }
+
+        .stat-pill.admin {
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        }
+
+        .stat-pill.active {
+          background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        }
+
+        .stat-pill.inactive {
+          background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        }
+
+        .stat-icon {
+          font-size: 16px;
+          margin-bottom: 2px;
+        }
+
+        .stat-value {
+          font-size: 18px;
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+        .stat-label {
           font-size: 10px;
-          color: #718096;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        /* Shift Grid for Schedule Card */
+        .shift-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+
+        .shift-item {
+          padding: 12px 10px;
+          border-radius: 12px;
+          text-align: center;
+          transition: all 0.2s ease;
+        }
+
+        .shift-item:hover {
+          transform: scale(1.05);
+        }
+
+        .shift-item.morning {
+          background: linear-gradient(135deg, #fef9c3 0%, #fef08a 100%);
+        }
+
+        .shift-item.afternoon {
+          background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+        }
+
+        .shift-item.fulltime {
+          background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        }
+
+        .shift-item.dayoff {
+          background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+        }
+
+        .shift-icon {
+          display: block;
+          font-size: 20px;
+          margin-bottom: 4px;
+        }
+
+        .shift-count {
+          display: block;
+          font-size: 22px;
+          font-weight: 800;
+          color: #1e293b;
+        }
+
+        .shift-label {
+          display: block;
+          font-size: 10px;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        /* Pattern Stats */
+        .pattern-stats {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin-bottom: 16px;
+        }
+
+        .pattern-item {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 12px;
+          background: #f8fafc;
+          border-radius: 10px;
+          overflow: hidden;
+        }
+
+        .pattern-bar {
+          position: absolute;
+          left: 0;
+          top: 0;
+          height: 100%;
+          border-radius: 10px;
+          opacity: 0.3;
+          transition: width 0.6s ease;
+        }
+
+        .dayoff-bar { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+        .fulltime-bar { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+        .vacation-bar { background: linear-gradient(90deg, #10b981, #059669); }
+
+        .pattern-label {
+          position: relative;
+          flex: 1;
+          font-size: 13px;
+          color: #475569;
+          z-index: 1;
+        }
+
+        .pattern-value {
+          position: relative;
+          font-size: 15px;
+          font-weight: 700;
+          color: #1e293b;
+          z-index: 1;
+        }
+
+        /* Available Card Hero */
+        .available-hero {
+          text-align: center;
+          margin-bottom: 16px;
+        }
+
+        .available-ring {
+          width: 100px;
+          height: 100px;
+          margin: 0 auto 12px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 
+            0 0 0 8px rgba(251, 191, 36, 0.2),
+            0 0 0 16px rgba(251, 191, 36, 0.1),
+            0 8px 24px rgba(251, 191, 36, 0.4);
+          animation: ringPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes ringPulse {
+          0%, 100% { box-shadow: 0 0 0 8px rgba(251, 191, 36, 0.2), 0 0 0 16px rgba(251, 191, 36, 0.1), 0 8px 24px rgba(251, 191, 36, 0.4); }
+          50% { box-shadow: 0 0 0 12px rgba(251, 191, 36, 0.3), 0 0 0 24px rgba(251, 191, 36, 0.15), 0 12px 32px rgba(251, 191, 36, 0.5); }
+        }
+
+        .available-number {
+          font-size: 36px;
+          font-weight: 800;
+          color: white;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .available-label {
+          font-size: 14px;
+          font-weight: 600;
+          color: #92400e;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+
+        .distribution-row {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 16px;
+          padding: 12px;
+          background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+          border-radius: 16px;
+          margin-bottom: 16px;
+        }
+
+        .distribution-item {
+          text-align: center;
+          flex: 1;
+        }
+
+        .distribution-icon {
+          font-size: 24px;
+          margin-bottom: 4px;
+        }
+
+        .distribution-value {
+          font-size: 24px;
+          font-weight: 800;
+          color: #1e293b;
+        }
+
+        .distribution-label {
+          font-size: 11px;
+          color: #64748b;
           text-transform: uppercase;
         }
 
-        .card-footer {
-          padding-top: 12px;
-          border-top: 1px solid #f1f5f9;
+        .distribution-percent {
+          font-size: 10px;
+          color: #f59e0b;
+          font-weight: 600;
         }
 
-        .footer-text {
-          font-size: 12px;
-          color: #718096;
+        .distribution-divider {
+          width: 2px;
+          height: 50px;
+          background: linear-gradient(to bottom, transparent, #d97706, transparent);
+          border-radius: 1px;
         }
 
-        /* Available Card Special */
-        .available-big-stat {
-          text-align: center;
-          padding: 16px 0;
+        /* Card Action Button */
+        .card-action {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 16px;
+          background: #f1f5f9;
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #475569;
+          transition: all 0.2s ease;
         }
 
+        .card-action.highlight {
+          background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+          color: white;
+        }
+
+        .glass-card:hover .card-action {
+          background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+          color: white;
+        }
+
+        .glass-card:hover .card-action.highlight {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .action-arrow {
+          font-size: 18px;
+          transition: transform 0.3s ease;
+        }
+
+        .glass-card:hover .action-arrow {
+          transform: translateX(4px);
+        }
+
+        /* Legacy styles for compatibility */
         .big-number {
           display: block;
           font-size: 3rem;
