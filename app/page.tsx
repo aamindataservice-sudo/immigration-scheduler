@@ -225,7 +225,7 @@ export default function Home() {
       localStorage.setItem("currentUser", JSON.stringify(data.user));
       // Ask to save biometric after successful login
       if (biometricAvailable && !savedUsers.find(u => u.id === data.user.id) && !data.user.mustChangePassword) {
-        if (confirm("Enable Face/Fingerprint login for faster access next time?")) {
+        if (confirm("Use your face or fingerprint to sign in next time?")) {
           await saveBiometric(data.user);
         }
       }
@@ -332,7 +332,7 @@ export default function Home() {
                   🔄 Try Again
                 </button>
                 <button className="password-btn" onClick={skipBiometric}>
-                  🔑 Use Password
+                  🔑 Enter Password Instead
                 </button>
               </div>
             </div>
@@ -351,7 +351,7 @@ export default function Home() {
                   🔄 Try Again
                 </button>
                 <button className="password-btn" onClick={skipBiometric}>
-                  🔑 Use Password
+                  🔑 Enter Password Instead
                 </button>
               </div>
             </div>
@@ -367,7 +367,7 @@ export default function Home() {
                 </button>
               ))}
               <button className="skip-btn" onClick={skipBiometric}>
-                Sign in with password instead
+                Enter password instead
               </button>
             </div>
           )}
@@ -683,20 +683,19 @@ export default function Home() {
             {/* Biometric Quick Login */}
             {biometricAvailable && savedUsers.length > 0 && (
               <div className="biometric-section">
-                <p className="section-label">Quick Login</p>
+                <p className="section-label">Sign In with Biometrics</p>
                 <div className="biometric-users">
                   {savedUsers.map((u) => (
                     <div key={u.id} className="biometric-user">
                       <button className="biometric-btn" onClick={() => loginWithBiometric(u)} disabled={loading}>
                         <span className="bio-icon">🔐</span>
                         <span className="bio-name">{u.fullName}</span>
-                        <span className="bio-hint">Tap to use Face/Fingerprint</span>
                       </button>
                       <button className="remove-bio-btn" onClick={() => removeBiometricUser(u.id)} title="Remove">✕</button>
                     </div>
                   ))}
                 </div>
-                <div className="divider"><span>or sign in with password</span></div>
+                <div className="divider"><span>Or use password instead</span></div>
               </div>
             )}
             <form onSubmit={submit}>
