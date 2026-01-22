@@ -774,7 +774,7 @@ export default function AdminPage() {
       {/* Sidebar */}
       <aside className={`sidebar ${mobileMenuOpen ? "open" : ""}`}>
         <div className="sidebar-header-mobile">
-          <div className="sidebar-brand">
+        <div className="sidebar-brand">
             <span className="brand-icon">🛫</span>
             <span className="brand-text">Immigration</span>
           </div>
@@ -851,32 +851,32 @@ export default function AdminPage() {
               <div className="profile-card-large">
                 <div className="profile-avatar-large">
                   {user?.fullName?.charAt(0)?.toUpperCase() || "?"}
-                </div>
+          </div>
                 <h3>{user?.fullName}</h3>
                 <span className={`role-badge ${user?.role?.toLowerCase()}`}>{user?.role}</span>
-              </div>
+            </div>
               <div className="profile-info-list">
                 <div className="info-item">
                   <span className="info-icon">📱</span>
                   <div className="info-text">
                     <span className="info-label">Phone</span>
                     <span className="info-value">{user?.phone}</span>
-                  </div>
-                </div>
+          </div>
+            </div>
                 <div className="info-item">
                   <span className="info-icon">✅</span>
                   <div className="info-text">
                     <span className="info-label">Status</span>
                     <span className="info-value status-active">Active</span>
-                  </div>
+          </div>
                 </div>
                 <div className="info-item">
                   <span className="info-icon">🌍</span>
                   <div className="info-text">
                     <span className="info-label">Timezone</span>
                     <span className="info-value">Africa/Mogadishu</span>
-                  </div>
-                </div>
+            </div>
+          </div>
               </div>
               
               {/* Menu Items */}
@@ -987,385 +987,150 @@ export default function AdminPage() {
         {/* Dashboard Home View */}
         {!activeSection && (
           <>
-        {/* Dashboard Cards - Exciting New Design */}
-        <div className="dashboard-cards">
-          {/* Users Summary Card */}
-          <div className="glass-card users-card" onClick={() => navigateToSection("users", "left")}>
-            <div className="card-glow users-glow"></div>
-            <div className="card-content">
-              <div className="card-icon-wrapper">
-                <div className="card-icon-bg users-icon-bg">
-                  <span className="card-icon-emoji">👥</span>
-                </div>
-                <div className="card-badge">{dashboardStats.totalUsers}</div>
+        {/* Dashboard Cards - Compact Beautiful Design */}
+        <div className="dash-grid">
+          {/* Users Card */}
+          <div className="dash-card" onClick={() => navigateToSection("users", "left")}>
+            <div className="dash-card-top">
+              <div className="dash-icon purple">👥</div>
+              <div className="dash-info">
+                <span className="dash-num">{dashboardStats.totalUsers}</span>
+                <span className="dash-label">Users</span>
               </div>
-              <h3 className="card-title">Team Members</h3>
-              <p className="card-subtitle">Manage your workforce</p>
-              <div className="stats-row">
-                <div className="stat-pill admin">
-                  <span className="stat-icon">👑</span>
-                  <span className="stat-value">{dashboardStats.admins}</span>
-                  <span className="stat-label">Admin</span>
-                </div>
-                <div className="stat-pill active">
-                  <span className="stat-icon">✅</span>
-                  <span className="stat-value">{dashboardStats.activeOfficers}</span>
-                  <span className="stat-label">Active</span>
-                </div>
-                <div className="stat-pill inactive">
-                  <span className="stat-icon">💤</span>
-                  <span className="stat-value">{dashboardStats.inactiveOfficers}</span>
-                  <span className="stat-label">Off</span>
-                </div>
-              </div>
-              <div className="card-action">
-                <span>Manage Users</span>
-                <span className="action-arrow">→</span>
-              </div>
+            </div>
+            <div className="dash-mini-stats">
+              <span className="mini green">✓ {dashboardStats.activeOfficers}</span>
+              <span className="mini red">✗ {dashboardStats.inactiveOfficers}</span>
+              <span className="mini blue">👑 {dashboardStats.admins}</span>
             </div>
           </div>
 
-          {/* Schedule Summary Card */}
-          <div className="glass-card schedule-card" onClick={() => navigateToSection("schedule", "left")}>
-            <div className="card-glow schedule-glow"></div>
-            <div className="card-content">
-              <div className="card-icon-wrapper">
-                <div className="card-icon-bg schedule-icon-bg">
-                  <span className="card-icon-emoji">📆</span>
-                </div>
-                <div className="card-badge pulse">{dashboardStats.workingToday}</div>
+          {/* Schedule Card */}
+          <div className="dash-card" onClick={() => navigateToSection("schedule", "left")}>
+            <div className="dash-card-top">
+              <div className="dash-icon blue">📆</div>
+              <div className="dash-info">
+                <span className="dash-num">{dashboardStats.workingToday}</span>
+                <span className="dash-label">{getScheduleViewLabel()}</span>
               </div>
-              <h3 className="card-title">{getScheduleViewLabel()}</h3>
-              <p className="card-subtitle">Live shift overview</p>
-              <div className="shift-grid">
-                <div className="shift-item morning">
-                  <span className="shift-icon">🌅</span>
-                  <span className="shift-count">{dashboardStats.morningShifts}</span>
-                  <span className="shift-label">Morning</span>
-                </div>
-                <div className="shift-item afternoon">
-                  <span className="shift-icon">🌇</span>
-                  <span className="shift-count">{dashboardStats.afternoonShifts}</span>
-                  <span className="shift-label">Afternoon</span>
-                </div>
-                <div className="shift-item fulltime">
-                  <span className="shift-icon">⏰</span>
-                  <span className="shift-count">{dashboardStats.fulltimeShifts}</span>
-                  <span className="shift-label">Full-Time</span>
-                </div>
-                <div className="shift-item dayoff">
-                  <span className="shift-icon">🏠</span>
-                  <span className="shift-count">{dashboardStats.offToday}</span>
-                  <span className="shift-label">Day Off</span>
-                </div>
-              </div>
-              <div className="card-action">
-                <span>View Schedule</span>
-                <span className="action-arrow">→</span>
-              </div>
+            </div>
+            <div className="dash-shifts">
+              <span className="shift morning">🌅 {dashboardStats.morningShifts}</span>
+              <span className="shift afternoon">🌇 {dashboardStats.afternoonShifts}</span>
+              <span className="shift full">⏰ {dashboardStats.fulltimeShifts}</span>
+              <span className="shift off">🏠 {dashboardStats.offToday}</span>
             </div>
           </div>
 
-          {/* Patterns Summary Card */}
-          <div className="glass-card patterns-card" onClick={() => navigateToSection("patterns", "left")}>
-            <div className="card-glow patterns-glow"></div>
-            <div className="card-content">
-              <div className="card-icon-wrapper">
-                <div className="card-icon-bg patterns-icon-bg">
-                  <span className="card-icon-emoji">📋</span>
-                </div>
-                <div className="card-badge">{dashboardStats.totalPatterns}</div>
+          {/* Patterns Card */}
+          <div className="dash-card" onClick={() => navigateToSection("patterns", "left")}>
+            <div className="dash-card-top">
+              <div className="dash-icon green">📋</div>
+              <div className="dash-info">
+                <span className="dash-num">{dashboardStats.totalPatterns}</span>
+                <span className="dash-label">Patterns</span>
               </div>
-              <h3 className="card-title">Weekly Patterns</h3>
-              <p className="card-subtitle">Recurring schedules</p>
-              <div className="pattern-stats">
-                <div className="pattern-item">
-                  <div className="pattern-bar dayoff-bar" style={{width: `${Math.min(100, (dashboardStats.dayOffPatterns / Math.max(1, dashboardStats.totalPatterns)) * 100)}%`}}></div>
-                  <span className="pattern-label">🏠 Day-Off</span>
-                  <span className="pattern-value">{dashboardStats.dayOffPatterns}</span>
-                </div>
-                <div className="pattern-item">
-                  <div className="pattern-bar fulltime-bar" style={{width: `${Math.min(100, (dashboardStats.fullTimePatterns / Math.max(1, dashboardStats.totalPatterns)) * 100)}%`}}></div>
-                  <span className="pattern-label">⏰ Full-Time</span>
-                  <span className="pattern-value">{dashboardStats.fullTimePatterns}</span>
-                </div>
-                <div className="pattern-item">
-                  <div className="pattern-bar vacation-bar" style={{width: `${Math.min(100, (dashboardStats.activeVacations / Math.max(1, dashboardStats.totalPatterns)) * 100)}%`}}></div>
-                  <span className="pattern-label">🏖️ Vacation</span>
-                  <span className="pattern-value">{dashboardStats.activeVacations}</span>
-                </div>
-              </div>
-              <div className="card-action">
-                <span>Edit Patterns</span>
-                <span className="action-arrow">→</span>
-              </div>
+            </div>
+            <div className="dash-mini-stats">
+              <span className="mini yellow">🏠 {dashboardStats.dayOffPatterns}</span>
+              <span className="mini blue">⏰ {dashboardStats.fullTimePatterns}</span>
+              <span className="mini green">🏖️ {dashboardStats.activeVacations}</span>
             </div>
           </div>
 
-          {/* Available Today Card */}
-          <div className="glass-card available-card" onClick={() => navigateToSection("schedule", "left")}>
-            <div className="card-glow available-glow"></div>
-            <div className="card-content">
-              <div className="available-hero">
-                <div className="available-ring">
-                  <div className="available-number">{availableCount}</div>
-                </div>
-                <div className="available-label">Officers Ready</div>
+          {/* Available Card */}
+          <div className="dash-card available" onClick={() => navigateToSection("schedule", "left")}>
+            <div className="dash-card-top">
+              <div className="dash-icon orange">✅</div>
+              <div className="dash-info">
+                <span className="dash-num">{availableCount}</span>
+                <span className="dash-label">Available</span>
               </div>
-              <div className="distribution-row">
-                <div className="distribution-item">
-                  <div className="distribution-icon">🌅</div>
-                  <div className="distribution-value">{Math.ceil((availableCount * 3) / 5)}</div>
-                  <div className="distribution-label">Morning</div>
-                  <div className="distribution-percent">60%</div>
-                </div>
-                <div className="distribution-divider"></div>
-                <div className="distribution-item">
-                  <div className="distribution-icon">🌇</div>
-                  <div className="distribution-value">{Math.floor((availableCount * 2) / 5)}</div>
-                  <div className="distribution-label">Afternoon</div>
-                  <div className="distribution-percent">40%</div>
-                </div>
+            </div>
+            <div className="dash-dist">
+              <div className="dist-item">
+                <span className="dist-num">{Math.ceil((availableCount * 3) / 5)}</span>
+                <span className="dist-label">🌅 60%</span>
               </div>
-              <div className="card-action highlight">
-                <span>Assign Now</span>
-                <span className="action-arrow">→</span>
+              <div className="dist-sep"></div>
+              <div className="dist-item">
+                <span className="dist-num">{Math.floor((availableCount * 2) / 5)}</span>
+                <span className="dist-label">🌇 40%</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Schedule Image Card - Screenshot and Share */}
-        <section className="share-image-section">
-          <div className="share-image-header">
-            <div className="share-icon-wrapper">
-              <div className="share-icon-bg">📸</div>
-            </div>
-            <div className="share-header-text">
-              <h2>Share as Image</h2>
-              <p>Screenshot ready for WhatsApp</p>
-            </div>
+        {/* Share Section - Compact */}
+        <div className="share-compact">
+          <div className="share-row">
+            <button className="share-btn green" onClick={async () => {
+              const card = document.getElementById("schedule-card");
+              if (!card) return;
+              try {
+                const canvas = await html2canvas(card, { scale: 2, backgroundColor: null, useCORS: true });
+                const link = document.createElement("a");
+                link.download = `schedule-${scheduleDate}.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+                setMessage("✅ Saved!");
+              } catch { setMessage("❌ Failed"); }
+            }}>📥 Save Image</button>
+            <button className="share-btn blue" onClick={() => copyWhatsApp("full")}>📲 WhatsApp</button>
+            <button className="share-btn gray" onClick={() => copyWhatsApp("dayoff")}>🏠 Day-Off</button>
           </div>
-          
-          <div className="share-actions-row">
-            <button 
-              className="btn-share-primary" 
-              onClick={async () => {
-                const card = document.getElementById("schedule-card");
-                if (!card) return;
-                try {
-                  const canvas = await html2canvas(card, { 
-                    scale: 2,
-                    backgroundColor: null,
-                    useCORS: true,
-                  });
-                  const link = document.createElement("a");
-                  link.download = `schedule-${scheduleDate}.png`;
-                  link.href = canvas.toDataURL("image/png");
-                  link.click();
-                  setMessage("✅ Image saved! Check your downloads/photos.");
-                } catch (e) {
-                  setMessage("❌ Failed to save image");
-                }
-              }}
-            >
-              <span className="btn-icon">📥</span>
-              <span className="btn-text">Save to Photos</span>
-            </button>
-            <button 
-              className="btn-share-secondary"
-              onClick={async () => {
-                const card = document.getElementById("schedule-card");
-                if (!card) return;
-                try {
-                  const canvas = await html2canvas(card, { scale: 2, backgroundColor: null, useCORS: true });
-                  canvas.toBlob(async (blob) => {
-                    if (blob && navigator.share) {
-                      const file = new File([blob], `schedule-${scheduleDate}.png`, { type: "image/png" });
-                      try {
-                        await navigator.share({ files: [file], title: "Immigration Schedule" });
-                        setMessage("✅ Shared successfully!");
-                      } catch (e: any) {
-                        if (e.name !== "AbortError") setMessage("❌ Share failed");
-                      }
-                    } else {
-                      setMessage("❌ Share not supported");
-                    }
-                  }, "image/png");
-                } catch (e) {
-                  setMessage("❌ Failed to share");
-                }
-              }}
-            >
-              <span className="btn-icon">📤</span>
-              <span className="btn-text">Share Direct</span>
-            </button>
-          </div>
-          
-          <div className="schedule-card-wrapper">
-            <div className="schedule-image-card" id="schedule-card">
-              <div className="img-card-header">
-                <div className="img-card-logo">
-                  <span>🛫</span>
+
+          {/* Schedule Card */}
+          <div className="sched-card" id="schedule-card">
+            <div className="sched-header">
+              <span className="sched-logo">🛫</span>
+              <div className="sched-title">
+                <strong>Immigration Schedule</strong>
+                <small>{new Date(scheduleDate).toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "short", timeZone: "Africa/Mogadishu" })}</small>
+              </div>
+            </div>
+            <div className="sched-body">
+              {shifts.filter(s => s.type === "MORNING").length > 0 && (
+                <div className="sched-group morning">
+                  <div className="sched-group-head">🌅 Morning <span>{shifts.filter(s => s.type === "MORNING").length}</span></div>
+                  <div className="sched-names">{shifts.filter(s => s.type === "MORNING").map(s => s.user?.fullName).join(" • ")}</div>
                 </div>
-                <div className="img-card-title">Immigration Schedule</div>
-                <div className="img-card-subtitle">Jadwalka Shaqada</div>
-              </div>
-              
-              <div className="img-card-date">
-                <div className="img-date-day">{new Date(scheduleDate).toLocaleDateString("en-US", { weekday: "long", timeZone: "Africa/Mogadishu" }).toUpperCase()}</div>
-                <div className="img-date-full">{new Date(scheduleDate).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Mogadishu" })}</div>
-              </div>
-
-              <div className="img-card-body">
-                {shifts.filter(s => s.type === "MORNING").length > 0 && (
-                  <div className="img-shift-block morning">
-                    <div className="img-shift-header">
-                      <span className="img-shift-icon">🌅</span>
-                      <span className="img-shift-title">Morning Shift</span>
-                      <span className="img-shift-badge">{shifts.filter(s => s.type === "MORNING").length}</span>
-                    </div>
-                    <div className="img-shift-officers">
-                      {shifts.filter(s => s.type === "MORNING").map((s, i) => (
-                        <span key={s.id} className="img-officer">{s.user?.fullName}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {shifts.filter(s => s.type === "AFTERNOON").length > 0 && (
-                  <div className="img-shift-block afternoon">
-                    <div className="img-shift-header">
-                      <span className="img-shift-icon">🌇</span>
-                      <span className="img-shift-title">Afternoon Shift</span>
-                      <span className="img-shift-badge">{shifts.filter(s => s.type === "AFTERNOON").length}</span>
-                    </div>
-                    <div className="img-shift-officers">
-                      {shifts.filter(s => s.type === "AFTERNOON").map((s, i) => (
-                        <span key={s.id} className="img-officer">{s.user?.fullName}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {shifts.filter(s => s.type === "FULLTIME").length > 0 && (
-                  <div className="img-shift-block fulltime">
-                    <div className="img-shift-header">
-                      <span className="img-shift-icon">⏰</span>
-                      <span className="img-shift-title">Full Day</span>
-                      <span className="img-shift-badge">{shifts.filter(s => s.type === "FULLTIME").length}</span>
-                    </div>
-                    <div className="img-shift-officers">
-                      {shifts.filter(s => s.type === "FULLTIME").map((s, i) => (
-                        <span key={s.id} className="img-officer">{s.user?.fullName}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {shifts.filter(s => s.type === "DAYOFF").length > 0 && (
-                  <div className="img-shift-block dayoff">
-                    <div className="img-shift-header">
-                      <span className="img-shift-icon">🏠</span>
-                      <span className="img-shift-title">Day Off</span>
-                      <span className="img-shift-badge">{shifts.filter(s => s.type === "DAYOFF").length}</span>
-                    </div>
-                    <div className="img-shift-officers">
-                      {shifts.filter(s => s.type === "DAYOFF").map((s, i) => (
-                        <span key={s.id} className="img-officer">{s.user?.fullName}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {shifts.length === 0 && (
-                  <div className="img-no-schedule">
-                    <div className="img-no-icon">📭</div>
-                    <div className="img-no-text">No schedule for this date</div>
-                  </div>
-                )}
-              </div>
-
-              <div className="img-card-footer">
-                <div className="img-footer-stats">
-                  <div className="img-stat working">
-                    <span className="img-stat-icon">✅</span>
-                    <span className="img-stat-value">{shifts.filter(s => !["DAYOFF", "VACATION"].includes(s.type)).length}</span>
-                    <span className="img-stat-label">Working</span>
-                  </div>
-                  <div className="img-stat off">
-                    <span className="img-stat-icon">🏠</span>
-                    <span className="img-stat-value">{shifts.filter(s => ["DAYOFF", "VACATION"].includes(s.type)).length}</span>
-                    <span className="img-stat-label">Off</span>
-                  </div>
-                  <div className="img-stat total">
-                    <span className="img-stat-icon">👥</span>
-                    <span className="img-stat-value">{shifts.length}</span>
-                    <span className="img-stat-label">Total</span>
-                  </div>
+              )}
+              {shifts.filter(s => s.type === "AFTERNOON").length > 0 && (
+                <div className="sched-group afternoon">
+                  <div className="sched-group-head">🌇 Afternoon <span>{shifts.filter(s => s.type === "AFTERNOON").length}</span></div>
+                  <div className="sched-names">{shifts.filter(s => s.type === "AFTERNOON").map(s => s.user?.fullName).join(" • ")}</div>
                 </div>
-                <div className="img-footer-brand">
-                  <span className="brand-icon">🛫</span>
-                  <span className="brand-text">Immigration Shift System</span>
+              )}
+              {shifts.filter(s => s.type === "FULLTIME").length > 0 && (
+                <div className="sched-group fulltime">
+                  <div className="sched-group-head">⏰ Full Day <span>{shifts.filter(s => s.type === "FULLTIME").length}</span></div>
+                  <div className="sched-names">{shifts.filter(s => s.type === "FULLTIME").map(s => s.user?.fullName).join(" • ")}</div>
                 </div>
-              </div>
+              )}
+              {shifts.filter(s => s.type === "DAYOFF").length > 0 && (
+                <div className="sched-group dayoff">
+                  <div className="sched-group-head">🏠 Day Off <span>{shifts.filter(s => s.type === "DAYOFF").length}</span></div>
+                  <div className="sched-names">{shifts.filter(s => s.type === "DAYOFF").map(s => s.user?.fullName).join(" • ")}</div>
+                </div>
+              )}
+              {shifts.length === 0 && <div className="sched-empty">📭 No schedule</div>}
+            </div>
+            <div className="sched-footer">
+              <span>✅ {shifts.filter(s => !["DAYOFF", "VACATION"].includes(s.type)).length}</span>
+              <span>🏠 {shifts.filter(s => ["DAYOFF", "VACATION"].includes(s.type)).length}</span>
+              <span>👥 {shifts.length}</span>
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* WhatsApp Export - Quick Access */}
-        <section className="panel panel-wide whatsapp-panel">
-          <div className="panel-header">
-            <h2 className="panel-title"><span className="title-icon">📣</span> Share Schedule</h2>
-            <span className="badge badge-green">WhatsApp Ready</span>
-          </div>
-          <div className="whatsapp-quick-actions">
-            <button className="btn btn-whatsapp btn-lg" onClick={() => copyWhatsApp("full")}>
-              📲 Share Full Schedule
-            </button>
-            <button className="btn btn-whatsapp-outline btn-lg" onClick={() => copyWhatsApp("dayoff")}>
-              🏠 Share Weekly Day-Off
-            </button>
-          </div>
-          {whatsText && <pre className="whatsapp-preview">{whatsText}</pre>}
-        </section>
-
-        {/* Quick Stats - Time, Countdown, Last Schedule */}
-        <section className="panel panel-wide activity-panel">
-          <div className="panel-header">
-            <h2 className="panel-title"><span className="title-icon">📊</span> Quick Info</h2>
-          </div>
-          <div className="activity-grid">
-            <div className="activity-item">
-              <span className="activity-icon">🕐</span>
-              <div className="activity-info">
-                <span className="activity-label">Current Time</span>
-                <span className="activity-value">{currentTime}</span>
-              </div>
-            </div>
-            <div className="activity-item">
-              <span className="activity-icon">⏳</span>
-              <div className="activity-info">
-                <span className="activity-label">Auto-Schedule In</span>
-                <span className="activity-value countdown-text">{countdown}</span>
-              </div>
-            </div>
-            <div className="activity-item">
-              <span className="activity-icon">📅</span>
-              <div className="activity-info">
-                <span className="activity-label">Last Schedule</span>
-                <span className="activity-value">{lastScheduleInfo?.date || "None"}</span>
-              </div>
-            </div>
-            <div className="activity-item">
-              <span className="activity-icon">{lastScheduleInfo?.isAuto ? "🤖" : "👤"}</span>
-              <div className="activity-info">
-                <span className="activity-label">Created By</span>
-                <span className="activity-value">{lastScheduleInfo ? (lastScheduleInfo.isAuto ? "System (Auto)" : "Manual") : "N/A"}</span>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* Quick Info Row */}
+        <div className="quick-row">
+          <div className="quick-item"><span>🕐</span><strong>{currentTime}</strong></div>
+          <div className="quick-item"><span>⏳</span><strong>{countdown}</strong></div>
+          <div className="quick-item"><span>📅</span><strong>{lastScheduleInfo?.date || "None"}</strong></div>
+        </div>
+        
           </>
         )}
 
@@ -1376,8 +1141,8 @@ export default function AdminPage() {
             <div className="section-header-mobile">
               <button className="back-btn" onClick={() => navigateToSection(null, "right")}>← Back</button>
               <h2>{activeSection === "patterns" ? "Patterns" : activeSection === "schedule" ? "Schedule" : activeSection === "users" ? "Users" : "Settings"}</h2>
-            </div>
-        
+        </div>
+
         {/* 1. Rules by Day - Collapsible */}
         <section id="rules" className={`panel panel-wide ${activeSection !== "patterns" ? "hidden-section" : ""}`}>
           <div className="panel-header">
@@ -1599,45 +1364,45 @@ export default function AdminPage() {
                       <div className="limit-icon">🌅</div>
                       <div className="limit-info">
                         <label>Morning Officers</label>
-                        <input
-                          type="number"
-                          className="input"
-                          min="0"
+                <input
+                  type="number"
+                  className="input"
+                  min="0"
                           max={availableCount}
-                          value={morningLimit}
+                  value={morningLimit}
                           placeholder={`~${Math.ceil((availableCount * 3) / 5)}`}
                           onChange={(e) => setMorningLimit(e.target.value === "" ? "" : Number(e.target.value))}
-                        />
-                      </div>
+                />
+              </div>
                     </div>
                     <div className="limit-card afternoon">
                       <div className="limit-icon">🌇</div>
                       <div className="limit-info">
                         <label>Afternoon (auto)</label>
-                        <input
-                          type="number"
+                <input
+                  type="number"
                           className="input input-readonly"
                           value={morningLimit === "" ? "" : calculatedAfternoon}
                           readOnly
                           placeholder="Auto"
-                        />
-                      </div>
+                />
+              </div>
                     </div>
                   </div>
-                </div>
-
+            </div>
+            
                 {/* Available Officers */}
                 <div className="config-section">
                   <div className="unified-available">
                     <div className="available-badge">
                       <span className="badge-count">{availableCount}</span>
                       <span className="badge-label">Available</span>
-                    </div>
+              </div>
                     <div className="available-suggestion">
                       Suggested: {Math.ceil((availableCount * 3) / 5)} morning / {Math.floor((availableCount * 2) / 5)} afternoon
-                    </div>
-                  </div>
-                </div>
+              </div>
+              </div>
+            </div>
 
                 {/* Generate Button */}
                 <div className="generate-section">
@@ -1647,41 +1412,41 @@ export default function AdminPage() {
                     disabled={morningLimit === ""}
                   >
                     ✨ Generate Schedule for {ruleDate}
-                  </button>
+              </button>
                   {morningLimit === "" && (
                     <p className="hint-text">Set morning limit to enable generation</p>
                   )}
-                </div>
-              </div>
+            </div>
+          </div>
             )}
           </div>
           {/* Only show schedule grid if there are shifts */}
           {hasExistingSchedule && (
-            <div className="schedule-grid">
-              {["MORNING", "AFTERNOON", "FULLTIME", "DAYOFF", "VACATION"].map((shiftType) => {
-                const shiftList = shifts.filter((s) => s.type === shiftType);
+          <div className="schedule-grid">
+            {["MORNING", "AFTERNOON", "FULLTIME", "DAYOFF", "VACATION"].map((shiftType) => {
+              const shiftList = shifts.filter((s) => s.type === shiftType);
                 // Hide empty columns
                 if (shiftList.length === 0) return null;
-                return (
-                  <div key={shiftType} className={`schedule-column ${shiftType.toLowerCase()}`}>
-                    <div className="column-header">
-                      <span className="column-icon">
-                        {shiftType === "MORNING" ? "🌅" : shiftType === "AFTERNOON" ? "🌇" : shiftType === "FULLTIME" ? "⏰" : shiftType === "DAYOFF" ? "🏠" : "🏖️"}
-                      </span>
-                      <span>{shiftType}</span>
-                      <span className="column-count">{shiftList.length}</span>
-                    </div>
-                    <div className="column-list">
-                      {shiftList.map((s) => (
-                        <div key={s.id} className="shift-item">
-                          {s.user?.fullName}
-                        </div>
-                      ))}
-                    </div>
+              return (
+                <div key={shiftType} className={`schedule-column ${shiftType.toLowerCase()}`}>
+                  <div className="column-header">
+                    <span className="column-icon">
+                      {shiftType === "MORNING" ? "🌅" : shiftType === "AFTERNOON" ? "🌇" : shiftType === "FULLTIME" ? "⏰" : shiftType === "DAYOFF" ? "🏠" : "🏖️"}
+                    </span>
+                    <span>{shiftType}</span>
+                    <span className="column-count">{shiftList.length}</span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="column-list">
+                    {shiftList.map((s) => (
+                      <div key={s.id} className="shift-item">
+                        {s.user?.fullName}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
           )}
         </section>
 
@@ -4547,298 +4312,258 @@ export default function AdminPage() {
           padding: 0 20px 20px;
         }
 
-        /* Dashboard Cards - Exciting Design */
-        .dashboard-cards {
+        /* Dashboard Grid - Compact */
+        .dash-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 16px;
-          margin-bottom: 24px;
+          gap: 12px;
+          margin-bottom: 16px;
         }
 
-        .glass-card {
-          position: relative;
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(20px);
-          border-radius: 24px;
-          padding: 0;
-          overflow: hidden;
+        .dash-card {
+          background: white;
+          border-radius: 16px;
+          padding: 14px;
           cursor: pointer;
-          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-          border: 1px solid rgba(255, 255, 255, 0.5);
-          box-shadow: 
-            0 4px 24px rgba(0, 0, 0, 0.06),
-            0 1px 2px rgba(0, 0, 0, 0.04);
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+          border: 1px solid #e5e7eb;
         }
 
-        .glass-card:hover {
-          transform: translateY(-8px) scale(1.02);
-          box-shadow: 
-            0 20px 40px rgba(0, 0, 0, 0.12),
-            0 8px 16px rgba(0, 0, 0, 0.08);
+        .dash-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
         }
 
-        .glass-card:active {
-          transform: translateY(-4px) scale(1.01);
+        .dash-card:active { transform: translateY(-1px); }
+
+        .dash-card-top {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 10px;
         }
 
-        .card-glow {
-          position: absolute;
-          top: -50%;
-          left: -50%;
-          width: 200%;
-          height: 200%;
-          opacity: 0;
-          transition: opacity 0.4s ease;
-          pointer-events: none;
+        .dash-icon {
+          width: 42px;
+          height: 42px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.25rem;
         }
 
-        .glass-card:hover .card-glow {
-          opacity: 1;
+        .dash-icon.purple { background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
+        .dash-icon.blue { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
+        .dash-icon.green { background: linear-gradient(135deg, #34d399, #10b981); }
+        .dash-icon.orange { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+
+        .dash-info {
+          display: flex;
+          flex-direction: column;
         }
 
-        .users-glow {
-          background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
+        .dash-num {
+          font-size: 24px;
+          font-weight: 800;
+          color: #1e293b;
+          line-height: 1;
         }
 
-        .schedule-glow {
-          background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 50%);
+        .dash-label {
+          font-size: 11px;
+          color: #64748b;
+          margin-top: 2px;
         }
 
-        .patterns-glow {
-          background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 50%);
+        .dash-mini-stats {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
         }
 
-        .available-glow {
-          background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, transparent 50%);
+        .dash-mini-stats .mini {
+          font-size: 11px;
+          padding: 4px 8px;
+          border-radius: 8px;
+          font-weight: 600;
         }
 
-        .card-content {
-          position: relative;
-          padding: 20px;
-          z-index: 1;
+        .mini.green { background: #d1fae5; color: #059669; }
+        .mini.red { background: #fee2e2; color: #dc2626; }
+        .mini.blue { background: #dbeafe; color: #2563eb; }
+        .mini.yellow { background: #fef3c7; color: #d97706; }
+
+        .dash-shifts {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
         }
 
-        .card-icon-wrapper {
-          position: relative;
-          display: inline-block;
+        .dash-shifts .shift {
+          font-size: 12px;
+          padding: 4px 8px;
+          border-radius: 8px;
+          font-weight: 600;
+        }
+
+        .shift.morning { background: #fef3c7; color: #92400e; }
+        .shift.afternoon { background: #fed7aa; color: #9a3412; }
+        .shift.full { background: #dbeafe; color: #1e40af; }
+        .shift.off { background: #e5e7eb; color: #374151; }
+
+        .dash-card.available { background: linear-gradient(135deg, #fef3c7, #fde68a); border: none; }
+
+        .dash-dist {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+        }
+
+        .dist-item { text-align: center; }
+        .dist-num { font-size: 20px; font-weight: 800; color: #92400e; display: block; }
+        .dist-label { font-size: 10px; color: #b45309; }
+        .dist-sep { width: 1px; height: 30px; background: rgba(146, 64, 14, 0.3); }
+
+        /* Share Section - Compact */
+        .share-compact {
+          background: linear-gradient(135deg, #1e3a5f, #0f172a);
+          border-radius: 16px;
+          padding: 14px;
           margin-bottom: 12px;
         }
 
-        .card-icon-bg {
-          width: 56px;
-          height: 56px;
-          border-radius: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.75rem;
-          transition: transform 0.3s ease;
-        }
-
-        .glass-card:hover .card-icon-bg {
-          transform: scale(1.1) rotate(-5deg);
-        }
-
-        .users-icon-bg {
-          background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
-          box-shadow: 0 8px 16px rgba(139, 92, 246, 0.3);
-        }
-
-        .schedule-icon-bg {
-          background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-          box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
-        }
-
-        .patterns-icon-bg {
-          background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
-          box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3);
-        }
-
-        .card-icon-emoji {
-          filter: brightness(0) invert(1);
-          font-size: 1.5rem;
-        }
-
-        .card-badge {
-          position: absolute;
-          top: -6px;
-          right: -6px;
-          min-width: 24px;
-          height: 24px;
-          padding: 0 6px;
-          background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
-          border-radius: 12px;
-          color: white;
-          font-size: 12px;
-          font-weight: 700;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 4px 8px rgba(244, 63, 94, 0.4);
-          border: 2px solid white;
-        }
-
-        .card-badge.pulse {
-          animation: badgePulse 2s ease-in-out infinite;
-        }
-
-        @keyframes badgePulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.1); }
-        }
-
-        .glass-card .card-title {
-          font-size: 18px;
-          font-weight: 700;
-          color: #1e293b;
-          margin: 0 0 4px;
-          display: block;
-        }
-
-        .glass-card .card-subtitle {
-          font-size: 13px;
-          color: #64748b;
-          margin-bottom: 16px;
-          display: block;
-        }
-
-        /* Stats Row for Users Card */
-        .stats-row {
+        .share-row {
           display: flex;
           gap: 8px;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
 
-        .stat-pill {
+        .share-btn {
           flex: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 10px 8px;
-          border-radius: 12px;
-          background: #f8fafc;
-          transition: all 0.2s ease;
-        }
-
-        .stat-pill:hover {
-          transform: translateY(-2px);
-        }
-
-        .stat-pill.admin {
-          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        }
-
-        .stat-pill.active {
-          background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-        }
-
-        .stat-pill.inactive {
-          background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-        }
-
-        .stat-icon {
-          font-size: 16px;
-          margin-bottom: 2px;
-        }
-
-        .stat-value {
-          font-size: 18px;
-          font-weight: 700;
-          color: #1e293b;
-        }
-
-        .stat-label {
-          font-size: 10px;
-          color: #64748b;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        /* Shift Grid for Schedule Card */
-        .shift-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 8px;
-          margin-bottom: 16px;
-        }
-
-        .shift-item {
-          padding: 12px 10px;
-          border-radius: 12px;
-          text-align: center;
-          transition: all 0.2s ease;
-        }
-
-        .shift-item:hover {
-          transform: scale(1.05);
-        }
-
-        .shift-item.morning {
-          background: linear-gradient(135deg, #fef9c3 0%, #fef08a 100%);
-        }
-
-        .shift-item.afternoon {
-          background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
-        }
-
-        .shift-item.fulltime {
-          background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-        }
-
-        .shift-item.dayoff {
-          background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
-        }
-
-        .shift-icon {
-          display: block;
-          font-size: 20px;
-          margin-bottom: 4px;
-        }
-
-        .shift-count {
-          display: block;
-          font-size: 22px;
-          font-weight: 800;
-          color: #1e293b;
-        }
-
-        .shift-label {
-          display: block;
-          font-size: 10px;
-          color: #64748b;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        /* Pattern Stats */
-        .pattern-stats {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          margin-bottom: 16px;
-        }
-
-        .pattern-item {
-          position: relative;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 8px 12px;
-          background: #f8fafc;
+          padding: 10px 12px;
+          border: none;
           border-radius: 10px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .share-btn.green { background: #10b981; color: white; }
+        .share-btn.blue { background: #3b82f6; color: white; }
+        .share-btn.gray { background: rgba(255,255,255,0.15); color: white; }
+        .share-btn:hover { transform: translateY(-2px); opacity: 0.9; }
+
+        /* Schedule Card - Compact */
+        .sched-card {
+          background: linear-gradient(180deg, #1e293b, #0f172a);
+          border-radius: 12px;
           overflow: hidden;
         }
 
-        .pattern-bar {
-          position: absolute;
-          left: 0;
-          top: 0;
-          height: 100%;
-          border-radius: 10px;
-          opacity: 0.3;
-          transition: width 0.6s ease;
+        .sched-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 12px;
+          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
         }
 
+        .sched-logo {
+          font-size: 1.5rem;
+          background: rgba(255,255,255,0.2);
+          padding: 6px;
+          border-radius: 8px;
+        }
+
+        .sched-title strong {
+          color: white;
+          font-size: 14px;
+          display: block;
+        }
+
+        .sched-title small {
+          color: rgba(255,255,255,0.8);
+          font-size: 11px;
+        }
+
+        .sched-body { padding: 10px; }
+
+        .sched-group {
+          background: rgba(255,255,255,0.05);
+          border-radius: 10px;
+          padding: 10px;
+          margin-bottom: 8px;
+          border-left: 3px solid;
+        }
+
+        .sched-group.morning { border-color: #fbbf24; }
+        .sched-group.afternoon { border-color: #f97316; }
+        .sched-group.fulltime { border-color: #3b82f6; }
+        .sched-group.dayoff { border-color: #94a3b8; }
+
+        .sched-group-head {
+          font-size: 12px;
+          font-weight: 600;
+          color: white;
+          margin-bottom: 6px;
+        }
+
+        .sched-group-head span {
+          background: rgba(255,255,255,0.2);
+          padding: 2px 8px;
+          border-radius: 10px;
+          margin-left: 6px;
+          font-size: 11px;
+        }
+
+        .sched-names {
+          font-size: 11px;
+          color: rgba(255,255,255,0.8);
+          line-height: 1.5;
+        }
+
+        .sched-empty {
+          text-align: center;
+          padding: 20px;
+          color: rgba(255,255,255,0.5);
+        }
+
+        .sched-footer {
+          display: flex;
+          justify-content: center;
+          gap: 16px;
+          padding: 10px;
+          background: rgba(0,0,0,0.3);
+          font-size: 12px;
+          color: rgba(255,255,255,0.8);
+        }
+
+        /* Quick Info Row */
+        .quick-row {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+
+        .quick-item {
+          flex: 1;
+          background: white;
+          border-radius: 12px;
+          padding: 10px;
+          text-align: center;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .quick-item span { font-size: 14px; display: block; margin-bottom: 2px; }
+        .quick-item strong { font-size: 13px; color: #1e293b; }
+
+        .hidden { display: none !important; }
+
+        /* Legacy compatibility */
         .dayoff-bar { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
         .fulltime-bar { background: linear-gradient(90deg, #3b82f6, #2563eb); }
         .vacation-bar { background: linear-gradient(90deg, #10b981, #059669); }
