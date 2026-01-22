@@ -1136,124 +1136,179 @@ export default function AdminPage() {
         </div>
 
         {/* Schedule Image Card - Screenshot and Share */}
-        <section className="panel panel-wide schedule-image-panel">
-          <div className="panel-header">
-            <h2 className="panel-title"><span className="title-icon">📸</span> Share as Image</h2>
+        <section className="share-image-section">
+          <div className="share-image-header">
+            <div className="share-icon-wrapper">
+              <div className="share-icon-bg">📸</div>
+            </div>
+            <div className="share-header-text">
+              <h2>Share as Image</h2>
+              <p>Screenshot ready for WhatsApp</p>
+            </div>
           </div>
-          <button 
-            className="btn btn-save-image" 
-            onClick={async () => {
-              const card = document.getElementById("schedule-card");
-              if (!card) return;
-              try {
-                const canvas = await html2canvas(card, { 
-                  scale: 2,
-                  backgroundColor: null,
-                  useCORS: true,
-                });
-                const link = document.createElement("a");
-                link.download = `schedule-${scheduleDate}.png`;
-                link.href = canvas.toDataURL("image/png");
-                link.click();
-                setMessage("✅ Image saved! Check your downloads/photos.");
-              } catch (e) {
-                setMessage("❌ Failed to save image");
-              }
-            }}
-          >
-            📥 Save Schedule Image to Photos
-          </button>
           
-          <div className="schedule-image-card" id="schedule-card">
-            <div className="card-header-gradient">
-              <div className="card-logo">🛫</div>
-              <div className="card-title">Immigration Schedule</div>
-              <div className="card-subtitle">Jadwalka Socdaalka</div>
-            </div>
-            
-            <div className="card-date-section">
-              <div className="card-day">{new Date(scheduleDate).toLocaleDateString("en-US", { weekday: "long", timeZone: "Africa/Mogadishu" })}</div>
-              <div className="card-date-big">{new Date(scheduleDate).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Mogadishu" })}</div>
-            </div>
-
-            <div className="card-shifts">
-              {shifts.filter(s => s.type === "MORNING").length > 0 && (
-                <div className="card-shift-group morning">
-                  <div className="shift-header">
-                    <span className="shift-emoji">🌅</span>
-                    <span className="shift-name">Morning</span>
-                    <span className="shift-count">{shifts.filter(s => s.type === "MORNING").length}</span>
-                  </div>
-                  <div className="shift-names">
-                    {shifts.filter(s => s.type === "MORNING").map((s, i) => (
-                      <span key={s.id} className="officer-name">{s.user?.fullName}{i < shifts.filter(x => x.type === "MORNING").length - 1 ? " • " : ""}</span>
-                    ))}
-                  </div>
+          <div className="share-actions-row">
+            <button 
+              className="btn-share-primary" 
+              onClick={async () => {
+                const card = document.getElementById("schedule-card");
+                if (!card) return;
+                try {
+                  const canvas = await html2canvas(card, { 
+                    scale: 2,
+                    backgroundColor: null,
+                    useCORS: true,
+                  });
+                  const link = document.createElement("a");
+                  link.download = `schedule-${scheduleDate}.png`;
+                  link.href = canvas.toDataURL("image/png");
+                  link.click();
+                  setMessage("✅ Image saved! Check your downloads/photos.");
+                } catch (e) {
+                  setMessage("❌ Failed to save image");
+                }
+              }}
+            >
+              <span className="btn-icon">📥</span>
+              <span className="btn-text">Save to Photos</span>
+            </button>
+            <button 
+              className="btn-share-secondary"
+              onClick={async () => {
+                const card = document.getElementById("schedule-card");
+                if (!card) return;
+                try {
+                  const canvas = await html2canvas(card, { scale: 2, backgroundColor: null, useCORS: true });
+                  canvas.toBlob(async (blob) => {
+                    if (blob && navigator.share) {
+                      const file = new File([blob], `schedule-${scheduleDate}.png`, { type: "image/png" });
+                      try {
+                        await navigator.share({ files: [file], title: "Immigration Schedule" });
+                        setMessage("✅ Shared successfully!");
+                      } catch (e: any) {
+                        if (e.name !== "AbortError") setMessage("❌ Share failed");
+                      }
+                    } else {
+                      setMessage("❌ Share not supported");
+                    }
+                  }, "image/png");
+                } catch (e) {
+                  setMessage("❌ Failed to share");
+                }
+              }}
+            >
+              <span className="btn-icon">📤</span>
+              <span className="btn-text">Share Direct</span>
+            </button>
+          </div>
+          
+          <div className="schedule-card-wrapper">
+            <div className="schedule-image-card" id="schedule-card">
+              <div className="img-card-header">
+                <div className="img-card-logo">
+                  <span>🛫</span>
                 </div>
-              )}
-              
-              {shifts.filter(s => s.type === "AFTERNOON").length > 0 && (
-                <div className="card-shift-group afternoon">
-                  <div className="shift-header">
-                    <span className="shift-emoji">🌇</span>
-                    <span className="shift-name">Afternoon</span>
-                    <span className="shift-count">{shifts.filter(s => s.type === "AFTERNOON").length}</span>
-                  </div>
-                  <div className="shift-names">
-                    {shifts.filter(s => s.type === "AFTERNOON").map((s, i) => (
-                      <span key={s.id} className="officer-name">{s.user?.fullName}{i < shifts.filter(x => x.type === "AFTERNOON").length - 1 ? " • " : ""}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {shifts.filter(s => s.type === "FULLTIME").length > 0 && (
-                <div className="card-shift-group fulltime">
-                  <div className="shift-header">
-                    <span className="shift-emoji">⏰</span>
-                    <span className="shift-name">Full Time</span>
-                    <span className="shift-count">{shifts.filter(s => s.type === "FULLTIME").length}</span>
-                  </div>
-                  <div className="shift-names">
-                    {shifts.filter(s => s.type === "FULLTIME").map((s, i) => (
-                      <span key={s.id} className="officer-name">{s.user?.fullName}{i < shifts.filter(x => x.type === "FULLTIME").length - 1 ? " • " : ""}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {shifts.filter(s => s.type === "DAYOFF").length > 0 && (
-                <div className="card-shift-group dayoff">
-                  <div className="shift-header">
-                    <span className="shift-emoji">🏠</span>
-                    <span className="shift-name">Day Off</span>
-                    <span className="shift-count">{shifts.filter(s => s.type === "DAYOFF").length}</span>
-                  </div>
-                  <div className="shift-names">
-                    {shifts.filter(s => s.type === "DAYOFF").map((s, i) => (
-                      <span key={s.id} className="officer-name">{s.user?.fullName}{i < shifts.filter(x => x.type === "DAYOFF").length - 1 ? " • " : ""}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {shifts.length === 0 && (
-                <div className="card-no-schedule">
-                  <div className="no-schedule-icon">📭</div>
-                  <div className="no-schedule-text">No schedule for this date</div>
-                </div>
-              )}
-            </div>
-
-            <div className="card-footer">
-              <div className="card-summary">
-                <span>✅ {shifts.filter(s => !["DAYOFF", "VACATION"].includes(s.type)).length} Working</span>
-                <span>•</span>
-                <span>🏠 {shifts.filter(s => ["DAYOFF", "VACATION"].includes(s.type)).length} Off</span>
-                <span>•</span>
-                <span>👥 {shifts.length} Total</span>
+                <div className="img-card-title">Immigration Schedule</div>
+                <div className="img-card-subtitle">Jadwalka Shaqada</div>
               </div>
-              <div className="card-watermark">Immigration Shift System</div>
+              
+              <div className="img-card-date">
+                <div className="img-date-day">{new Date(scheduleDate).toLocaleDateString("en-US", { weekday: "long", timeZone: "Africa/Mogadishu" }).toUpperCase()}</div>
+                <div className="img-date-full">{new Date(scheduleDate).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Mogadishu" })}</div>
+              </div>
+
+              <div className="img-card-body">
+                {shifts.filter(s => s.type === "MORNING").length > 0 && (
+                  <div className="img-shift-block morning">
+                    <div className="img-shift-header">
+                      <span className="img-shift-icon">🌅</span>
+                      <span className="img-shift-title">Morning Shift</span>
+                      <span className="img-shift-badge">{shifts.filter(s => s.type === "MORNING").length}</span>
+                    </div>
+                    <div className="img-shift-officers">
+                      {shifts.filter(s => s.type === "MORNING").map((s, i) => (
+                        <span key={s.id} className="img-officer">{s.user?.fullName}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {shifts.filter(s => s.type === "AFTERNOON").length > 0 && (
+                  <div className="img-shift-block afternoon">
+                    <div className="img-shift-header">
+                      <span className="img-shift-icon">🌇</span>
+                      <span className="img-shift-title">Afternoon Shift</span>
+                      <span className="img-shift-badge">{shifts.filter(s => s.type === "AFTERNOON").length}</span>
+                    </div>
+                    <div className="img-shift-officers">
+                      {shifts.filter(s => s.type === "AFTERNOON").map((s, i) => (
+                        <span key={s.id} className="img-officer">{s.user?.fullName}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {shifts.filter(s => s.type === "FULLTIME").length > 0 && (
+                  <div className="img-shift-block fulltime">
+                    <div className="img-shift-header">
+                      <span className="img-shift-icon">⏰</span>
+                      <span className="img-shift-title">Full Day</span>
+                      <span className="img-shift-badge">{shifts.filter(s => s.type === "FULLTIME").length}</span>
+                    </div>
+                    <div className="img-shift-officers">
+                      {shifts.filter(s => s.type === "FULLTIME").map((s, i) => (
+                        <span key={s.id} className="img-officer">{s.user?.fullName}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {shifts.filter(s => s.type === "DAYOFF").length > 0 && (
+                  <div className="img-shift-block dayoff">
+                    <div className="img-shift-header">
+                      <span className="img-shift-icon">🏠</span>
+                      <span className="img-shift-title">Day Off</span>
+                      <span className="img-shift-badge">{shifts.filter(s => s.type === "DAYOFF").length}</span>
+                    </div>
+                    <div className="img-shift-officers">
+                      {shifts.filter(s => s.type === "DAYOFF").map((s, i) => (
+                        <span key={s.id} className="img-officer">{s.user?.fullName}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {shifts.length === 0 && (
+                  <div className="img-no-schedule">
+                    <div className="img-no-icon">📭</div>
+                    <div className="img-no-text">No schedule for this date</div>
+                  </div>
+                )}
+              </div>
+
+              <div className="img-card-footer">
+                <div className="img-footer-stats">
+                  <div className="img-stat working">
+                    <span className="img-stat-icon">✅</span>
+                    <span className="img-stat-value">{shifts.filter(s => !["DAYOFF", "VACATION"].includes(s.type)).length}</span>
+                    <span className="img-stat-label">Working</span>
+                  </div>
+                  <div className="img-stat off">
+                    <span className="img-stat-icon">🏠</span>
+                    <span className="img-stat-value">{shifts.filter(s => ["DAYOFF", "VACATION"].includes(s.type)).length}</span>
+                    <span className="img-stat-label">Off</span>
+                  </div>
+                  <div className="img-stat total">
+                    <span className="img-stat-icon">👥</span>
+                    <span className="img-stat-value">{shifts.length}</span>
+                    <span className="img-stat-label">Total</span>
+                  </div>
+                </div>
+                <div className="img-footer-brand">
+                  <span className="brand-icon">🛫</span>
+                  <span className="brand-text">Immigration Shift System</span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -3739,151 +3794,364 @@ export default function AdminPage() {
           line-height: 1.6;
         }
 
-        /* Schedule Image Card - Screenshot Friendly */
-        .schedule-image-panel {
-          background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-          border: 2px solid #0ea5e9;
+        /* Share as Image Section - Exciting Design */
+        .share-image-section {
+          background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%);
+          border-radius: 24px;
+          padding: 24px;
+          margin-bottom: 20px;
+          position: relative;
+          overflow: hidden;
         }
 
-        .btn-save-image {
-          width: 100%;
-          padding: 16px 24px;
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        .share-image-section::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 50%);
+          animation: shimmer 8s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(25%, 25%); }
+        }
+
+        .share-image-header {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 20px;
+          position: relative;
+          z-index: 1;
+        }
+
+        .share-icon-wrapper {
+          flex-shrink: 0;
+        }
+
+        .share-icon-bg {
+          width: 56px;
+          height: 56px;
+          border-radius: 16px;
+          background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.75rem;
+          box-shadow: 0 8px 24px rgba(249, 115, 22, 0.4);
+          animation: iconFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes iconFloat {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+
+        .share-header-text h2 {
           color: white;
+          font-size: 20px;
+          font-weight: 700;
+          margin: 0;
+        }
+
+        .share-header-text p {
+          color: rgba(255, 255, 255, 0.7);
+          font-size: 13px;
+          margin: 4px 0 0;
+        }
+
+        .share-actions-row {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 20px;
+          position: relative;
+          z-index: 1;
+        }
+
+        .btn-share-primary,
+        .btn-share-secondary {
+          flex: 1;
+          padding: 14px 16px;
           border: none;
-          border-radius: 12px;
-          font-size: 16px;
+          border-radius: 14px;
+          font-size: 14px;
           font-weight: 600;
           cursor: pointer;
-          margin-bottom: 16px;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-          transition: all 0.2s ease;
+          transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        .btn-save-image:hover {
-          transform: translateY(-2px);
+        .btn-share-primary {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
           box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
         }
 
-        .btn-save-image:active {
-          transform: translateY(0);
+        .btn-share-primary:hover {
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 10px 30px rgba(16, 185, 129, 0.5);
+        }
+
+        .btn-share-secondary {
+          background: rgba(255, 255, 255, 0.15);
+          color: white;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          backdrop-filter: blur(10px);
+        }
+
+        .btn-share-secondary:hover {
+          background: rgba(255, 255, 255, 0.25);
+          transform: translateY(-3px) scale(1.02);
+        }
+
+        .btn-icon {
+          font-size: 18px;
+        }
+
+        .btn-text {
+          font-size: 13px;
+        }
+
+        .schedule-card-wrapper {
+          position: relative;
+          z-index: 1;
+          border-radius: 20px;
+          overflow: hidden;
+          box-shadow: 
+            0 20px 60px rgba(0, 0, 0, 0.4),
+            0 0 0 1px rgba(255, 255, 255, 0.1);
         }
 
         .schedule-image-card {
-          background: linear-gradient(145deg, #1e3a5f 0%, #0f172a 100%);
+          background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
           border-radius: 20px;
           overflow: hidden;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
         }
 
-        .card-header-gradient {
-          background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-          padding: 20px;
+        .img-card-header {
+          background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #d946ef 100%);
+          padding: 24px 20px;
           text-align: center;
+          position: relative;
         }
 
-        .card-logo {
-          font-size: 2.5rem;
-          margin-bottom: 8px;
+        .img-card-header::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 40px;
+          background: linear-gradient(to top, rgba(15, 23, 42, 0.5), transparent);
         }
 
-        .card-title {
-          font-size: 1.5rem;
-          font-weight: 700;
+        .img-card-logo {
+          width: 64px;
+          height: 64px;
+          margin: 0 auto 12px;
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 2rem;
+          backdrop-filter: blur(10px);
+          border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .img-card-title {
+          font-size: 22px;
+          font-weight: 800;
           color: white;
-          margin-bottom: 4px;
+          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
 
-        .card-subtitle {
-          font-size: 0.875rem;
+        .img-card-subtitle {
+          font-size: 13px;
           color: rgba(255, 255, 255, 0.8);
+          margin-top: 4px;
           font-style: italic;
         }
 
-        .card-date-section {
-          background: rgba(255, 255, 255, 0.1);
+        .img-card-date {
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
           padding: 16px;
           text-align: center;
           border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .card-day {
-          font-size: 1rem;
-          color: #93c5fd;
-          font-weight: 500;
-          text-transform: uppercase;
-          letter-spacing: 2px;
+        .img-date-day {
+          font-size: 12px;
+          color: #60a5fa;
+          font-weight: 700;
+          letter-spacing: 3px;
+          margin-bottom: 4px;
         }
 
-        .card-date-big {
-          font-size: 1.5rem;
+        .img-date-full {
+          font-size: 20px;
           font-weight: 700;
           color: white;
-          margin-top: 4px;
         }
 
-        .card-shifts {
+        .img-card-body {
           padding: 16px;
         }
 
-        .card-shift-group {
+        .img-shift-block {
           background: rgba(255, 255, 255, 0.05);
-          border-radius: 12px;
-          padding: 12px 16px;
+          border-radius: 16px;
+          padding: 14px 16px;
           margin-bottom: 12px;
-          border-left: 4px solid;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          transition: all 0.2s ease;
         }
 
-        .card-shift-group.morning {
-          border-left-color: #fbbf24;
-          background: linear-gradient(90deg, rgba(251, 191, 36, 0.1) 0%, transparent 100%);
+        .img-shift-block.morning {
+          background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.05) 100%);
+          border-left: 4px solid #fbbf24;
         }
 
-        .card-shift-group.afternoon {
-          border-left-color: #f97316;
-          background: linear-gradient(90deg, rgba(249, 115, 22, 0.1) 0%, transparent 100%);
+        .img-shift-block.afternoon {
+          background: linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(249, 115, 22, 0.05) 100%);
+          border-left: 4px solid #f97316;
         }
 
-        .card-shift-group.fulltime {
-          border-left-color: #22c55e;
-          background: linear-gradient(90deg, rgba(34, 197, 94, 0.1) 0%, transparent 100%);
+        .img-shift-block.fulltime {
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%);
+          border-left: 4px solid #3b82f6;
         }
 
-        .card-shift-group.dayoff {
-          border-left-color: #94a3b8;
-          background: linear-gradient(90deg, rgba(148, 163, 184, 0.1) 0%, transparent 100%);
+        .img-shift-block.dayoff {
+          background: linear-gradient(135deg, rgba(148, 163, 184, 0.15) 0%, rgba(148, 163, 184, 0.05) 100%);
+          border-left: 4px solid #94a3b8;
         }
 
-        .shift-header {
+        .img-shift-header {
           display: flex;
           align-items: center;
-          gap: 8px;
-          margin-bottom: 8px;
+          gap: 10px;
+          margin-bottom: 10px;
         }
 
-        .shift-emoji {
-          font-size: 1.25rem;
+        .img-shift-icon {
+          font-size: 20px;
         }
 
-        .shift-name {
-          font-weight: 600;
+        .img-shift-title {
+          font-weight: 700;
           color: white;
+          font-size: 14px;
           flex: 1;
         }
 
-        .shift-count {
-          background: rgba(255, 255, 255, 0.2);
-          padding: 2px 10px;
-          border-radius: 12px;
-          font-size: 0.875rem;
-          font-weight: 600;
+        .img-shift-badge {
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+          padding: 4px 12px;
+          border-radius: 20px;
+          font-size: 13px;
+          font-weight: 700;
+          color: white;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .img-shift-officers {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .img-officer {
+          background: rgba(255, 255, 255, 0.1);
+          padding: 4px 10px;
+          border-radius: 8px;
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .img-no-schedule {
+          text-align: center;
+          padding: 40px 20px;
+        }
+
+        .img-no-icon {
+          font-size: 3rem;
+          margin-bottom: 12px;
+          opacity: 0.5;
+        }
+
+        .img-no-text {
+          color: rgba(255, 255, 255, 0.5);
+          font-size: 14px;
+        }
+
+        .img-card-footer {
+          background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.9) 100%);
+          padding: 16px;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .img-footer-stats {
+          display: flex;
+          justify-content: center;
+          gap: 24px;
+          margin-bottom: 12px;
+        }
+
+        .img-stat {
+          text-align: center;
+        }
+
+        .img-stat-icon {
+          display: block;
+          font-size: 16px;
+          margin-bottom: 2px;
+        }
+
+        .img-stat-value {
+          display: block;
+          font-size: 20px;
+          font-weight: 800;
           color: white;
         }
 
+        .img-stat-label {
+          display: block;
+          font-size: 10px;
+          color: rgba(255, 255, 255, 0.6);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .img-footer-brand {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding-top: 12px;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .brand-icon {
+          font-size: 16px;
+        }
+
+        .brand-text {
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.5);
+          font-weight: 500;
+          letter-spacing: 0.5px;
+        }
+
+        /* Legacy compatibility */
         .shift-names {
           color: rgba(255, 255, 255, 0.8);
           font-size: 0.875rem;
