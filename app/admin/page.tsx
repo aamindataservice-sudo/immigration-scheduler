@@ -987,148 +987,185 @@ export default function AdminPage() {
         {/* Dashboard Home View */}
         {!activeSection && (
           <>
-        {/* Dashboard Cards - Compact Beautiful Design */}
-        <div className="dash-grid">
-          {/* Users Card */}
-          <div className="dash-card" onClick={() => navigateToSection("users", "left")}>
-            <div className="dash-card-top">
-              <div className="dash-icon purple">👥</div>
-              <div className="dash-info">
-                <span className="dash-num">{dashboardStats.totalUsers}</span>
-                <span className="dash-label">Users</span>
-              </div>
+        {/* Premium Dashboard Cards */}
+        <div className="premium-grid">
+          <div className="premium-card violet" onClick={() => navigateToSection("users", "left")}>
+            <div className="card-shine"></div>
+            <div className="card-top">
+              <div className="card-icon">👥</div>
+              <div className="card-number">{dashboardStats.totalUsers}</div>
             </div>
-            <div className="dash-mini-stats">
-              <span className="mini green">✓ {dashboardStats.activeOfficers}</span>
-              <span className="mini red">✗ {dashboardStats.inactiveOfficers}</span>
-              <span className="mini blue">👑 {dashboardStats.admins}</span>
+            <div className="card-label">Team Members</div>
+            <div className="card-tags">
+              <span className="tag success">● {dashboardStats.activeOfficers} Active</span>
+              <span className="tag warning">● {dashboardStats.inactiveOfficers} Off</span>
             </div>
           </div>
 
-          {/* Schedule Card */}
-          <div className="dash-card" onClick={() => navigateToSection("schedule", "left")}>
-            <div className="dash-card-top">
-              <div className="dash-icon blue">📆</div>
-              <div className="dash-info">
-                <span className="dash-num">{dashboardStats.workingToday}</span>
-                <span className="dash-label">{getScheduleViewLabel()}</span>
-              </div>
+          <div className="premium-card blue" onClick={() => navigateToSection("schedule", "left")}>
+            <div className="card-shine"></div>
+            <div className="card-top">
+              <div className="card-icon">📅</div>
+              <div className="card-number">{dashboardStats.workingToday}</div>
             </div>
-            <div className="dash-shifts">
-              <span className="shift morning">🌅 {dashboardStats.morningShifts}</span>
-              <span className="shift afternoon">🌇 {dashboardStats.afternoonShifts}</span>
-              <span className="shift full">⏰ {dashboardStats.fulltimeShifts}</span>
-              <span className="shift off">🏠 {dashboardStats.offToday}</span>
+            <div className="card-label">{getScheduleViewLabel()}</div>
+            <div className="card-mini-grid">
+              <div className="mini-item"><span>🌅</span>{dashboardStats.morningShifts}</div>
+              <div className="mini-item"><span>🌇</span>{dashboardStats.afternoonShifts}</div>
+              <div className="mini-item"><span>⏰</span>{dashboardStats.fulltimeShifts}</div>
+              <div className="mini-item"><span>🏠</span>{dashboardStats.offToday}</div>
             </div>
           </div>
 
-          {/* Patterns Card */}
-          <div className="dash-card" onClick={() => navigateToSection("patterns", "left")}>
-            <div className="dash-card-top">
-              <div className="dash-icon green">📋</div>
-              <div className="dash-info">
-                <span className="dash-num">{dashboardStats.totalPatterns}</span>
-                <span className="dash-label">Patterns</span>
-              </div>
+          <div className="premium-card emerald" onClick={() => navigateToSection("patterns", "left")}>
+            <div className="card-shine"></div>
+            <div className="card-top">
+              <div className="card-icon">📋</div>
+              <div className="card-number">{dashboardStats.totalPatterns}</div>
             </div>
-            <div className="dash-mini-stats">
-              <span className="mini yellow">🏠 {dashboardStats.dayOffPatterns}</span>
-              <span className="mini blue">⏰ {dashboardStats.fullTimePatterns}</span>
-              <span className="mini green">🏖️ {dashboardStats.activeVacations}</span>
+            <div className="card-label">Weekly Patterns</div>
+            <div className="card-tags">
+              <span className="tag">🏠 {dashboardStats.dayOffPatterns}</span>
+              <span className="tag">⏰ {dashboardStats.fullTimePatterns}</span>
             </div>
           </div>
 
-          {/* Available Card */}
-          <div className="dash-card available" onClick={() => navigateToSection("schedule", "left")}>
-            <div className="dash-card-top">
-              <div className="dash-icon orange">✅</div>
-              <div className="dash-info">
-                <span className="dash-num">{availableCount}</span>
-                <span className="dash-label">Available</span>
-              </div>
+          <div className="premium-card amber" onClick={() => navigateToSection("schedule", "left")}>
+            <div className="card-shine"></div>
+            <div className="card-top">
+              <div className="card-icon">✅</div>
+              <div className="card-number">{availableCount}</div>
             </div>
-            <div className="dash-dist">
-              <div className="dist-item">
-                <span className="dist-num">{Math.ceil((availableCount * 3) / 5)}</span>
-                <span className="dist-label">🌅 60%</span>
+            <div className="card-label">Ready Today</div>
+            <div className="card-split">
+              <div className="split-item">
+                <div className="split-num">{Math.ceil((availableCount * 3) / 5)}</div>
+                <div className="split-label">🌅 AM</div>
               </div>
-              <div className="dist-sep"></div>
-              <div className="dist-item">
-                <span className="dist-num">{Math.floor((availableCount * 2) / 5)}</span>
-                <span className="dist-label">🌇 40%</span>
+              <div className="split-divider"></div>
+              <div className="split-item">
+                <div className="split-num">{Math.floor((availableCount * 2) / 5)}</div>
+                <div className="split-label">🌇 PM</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Share Section - Compact */}
-        <div className="share-compact">
-          <div className="share-row">
-            <button className="share-btn green" onClick={async () => {
-              const card = document.getElementById("schedule-card");
-              if (!card) return;
-              try {
-                const canvas = await html2canvas(card, { scale: 2, backgroundColor: null, useCORS: true });
-                const link = document.createElement("a");
-                link.download = `schedule-${scheduleDate}.png`;
-                link.href = canvas.toDataURL("image/png");
-                link.click();
-                setMessage("✅ Saved!");
-              } catch { setMessage("❌ Failed"); }
-            }}>📥 Save Image</button>
-            <button className="share-btn blue" onClick={() => copyWhatsApp("full")}>📲 WhatsApp</button>
-            <button className="share-btn gray" onClick={() => copyWhatsApp("dayoff")}>🏠 Day-Off</button>
-          </div>
+        {/* Quick Stats Bar */}
+        <div className="stats-bar">
+          <div className="stat-chip"><span className="chip-icon">🕐</span>{currentTime}</div>
+          <div className="stat-chip highlight"><span className="chip-icon">⏳</span>{countdown}</div>
+          <div className="stat-chip"><span className="chip-icon">📆</span>{lastScheduleInfo?.date?.slice(5) || "—"}</div>
+        </div>
 
-          {/* Schedule Card */}
-          <div className="sched-card" id="schedule-card">
-            <div className="sched-header">
-              <span className="sched-logo">🛫</span>
-              <div className="sched-title">
-                <strong>Immigration Schedule</strong>
-                <small>{new Date(scheduleDate).toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "short", timeZone: "Africa/Mogadishu" })}</small>
+        {/* Share Actions */}
+        <div className="share-actions">
+          <button className="action-btn primary" onClick={async () => {
+            const card = document.getElementById("schedule-card");
+            if (!card) return;
+            try {
+              const canvas = await html2canvas(card, { scale: 2, backgroundColor: null, useCORS: true });
+              const link = document.createElement("a");
+              link.download = `schedule-${scheduleDate}.png`;
+              link.href = canvas.toDataURL("image/png");
+              link.click();
+              setMessage("✅ Saved!");
+            } catch { setMessage("❌ Failed"); }
+          }}>📥 Save</button>
+          <button className="action-btn success" onClick={() => copyWhatsApp("full")}>📲 Share</button>
+          <button className="action-btn secondary" onClick={() => copyWhatsApp("dayoff")}>🏠 Day-Off</button>
+        </div>
+
+        {/* Beautiful Schedule Card for Image */}
+        <div className="image-card-wrap">
+          <div className="image-card" id="schedule-card">
+            <div className="img-header">
+              <div className="img-brand">
+                <div className="brand-logo">🛫</div>
+                <div className="brand-info">
+                  <div className="brand-title">Immigration</div>
+                  <div className="brand-subtitle">Shift Schedule</div>
+                </div>
+              </div>
+              <div className="img-date">
+                <div className="date-day">{new Date(scheduleDate).toLocaleDateString("en-US", { weekday: "short", timeZone: "Africa/Mogadishu" })}</div>
+                <div className="date-num">{new Date(scheduleDate).getDate()}</div>
+                <div className="date-month">{new Date(scheduleDate).toLocaleDateString("en-US", { month: "short", timeZone: "Africa/Mogadishu" })}</div>
               </div>
             </div>
-            <div className="sched-body">
+            
+            <div className="img-body">
               {shifts.filter(s => s.type === "MORNING").length > 0 && (
-                <div className="sched-group morning">
-                  <div className="sched-group-head">🌅 Morning <span>{shifts.filter(s => s.type === "MORNING").length}</span></div>
-                  <div className="sched-names">{shifts.filter(s => s.type === "MORNING").map(s => s.user?.fullName).join(" • ")}</div>
+                <div className="shift-section morning">
+                  <div className="section-head">
+                    <span className="section-icon">🌅</span>
+                    <span className="section-title">Morning</span>
+                    <span className="section-count">{shifts.filter(s => s.type === "MORNING").length}</span>
+                  </div>
+                  <div className="section-names">
+                    {shifts.filter(s => s.type === "MORNING").map((s, i) => (
+                      <span key={s.id} className="name-tag">{s.user?.fullName}</span>
+                    ))}
+                  </div>
                 </div>
               )}
               {shifts.filter(s => s.type === "AFTERNOON").length > 0 && (
-                <div className="sched-group afternoon">
-                  <div className="sched-group-head">🌇 Afternoon <span>{shifts.filter(s => s.type === "AFTERNOON").length}</span></div>
-                  <div className="sched-names">{shifts.filter(s => s.type === "AFTERNOON").map(s => s.user?.fullName).join(" • ")}</div>
+                <div className="shift-section afternoon">
+                  <div className="section-head">
+                    <span className="section-icon">🌇</span>
+                    <span className="section-title">Afternoon</span>
+                    <span className="section-count">{shifts.filter(s => s.type === "AFTERNOON").length}</span>
+                  </div>
+                  <div className="section-names">
+                    {shifts.filter(s => s.type === "AFTERNOON").map((s, i) => (
+                      <span key={s.id} className="name-tag">{s.user?.fullName}</span>
+                    ))}
+                  </div>
                 </div>
               )}
               {shifts.filter(s => s.type === "FULLTIME").length > 0 && (
-                <div className="sched-group fulltime">
-                  <div className="sched-group-head">⏰ Full Day <span>{shifts.filter(s => s.type === "FULLTIME").length}</span></div>
-                  <div className="sched-names">{shifts.filter(s => s.type === "FULLTIME").map(s => s.user?.fullName).join(" • ")}</div>
+                <div className="shift-section fulltime">
+                  <div className="section-head">
+                    <span className="section-icon">⏰</span>
+                    <span className="section-title">Full Day</span>
+                    <span className="section-count">{shifts.filter(s => s.type === "FULLTIME").length}</span>
+                  </div>
+                  <div className="section-names">
+                    {shifts.filter(s => s.type === "FULLTIME").map((s, i) => (
+                      <span key={s.id} className="name-tag">{s.user?.fullName}</span>
+                    ))}
+                  </div>
                 </div>
               )}
               {shifts.filter(s => s.type === "DAYOFF").length > 0 && (
-                <div className="sched-group dayoff">
-                  <div className="sched-group-head">🏠 Day Off <span>{shifts.filter(s => s.type === "DAYOFF").length}</span></div>
-                  <div className="sched-names">{shifts.filter(s => s.type === "DAYOFF").map(s => s.user?.fullName).join(" • ")}</div>
+                <div className="shift-section dayoff">
+                  <div className="section-head">
+                    <span className="section-icon">🏠</span>
+                    <span className="section-title">Day Off</span>
+                    <span className="section-count">{shifts.filter(s => s.type === "DAYOFF").length}</span>
+                  </div>
+                  <div className="section-names">
+                    {shifts.filter(s => s.type === "DAYOFF").map((s, i) => (
+                      <span key={s.id} className="name-tag">{s.user?.fullName}</span>
+                    ))}
+                  </div>
                 </div>
               )}
-              {shifts.length === 0 && <div className="sched-empty">📭 No schedule</div>}
+              {shifts.length === 0 && (
+                <div className="no-schedule">
+                  <span className="no-icon">📭</span>
+                  <span className="no-text">No schedule for this date</span>
+                </div>
+              )}
             </div>
-            <div className="sched-footer">
-              <span>✅ {shifts.filter(s => !["DAYOFF", "VACATION"].includes(s.type)).length}</span>
-              <span>🏠 {shifts.filter(s => ["DAYOFF", "VACATION"].includes(s.type)).length}</span>
-              <span>👥 {shifts.length}</span>
+
+            <div className="img-footer">
+              <div className="footer-stat"><span className="stat-icon working">✅</span><span>{shifts.filter(s => !["DAYOFF", "VACATION"].includes(s.type)).length}</span></div>
+              <div className="footer-stat"><span className="stat-icon off">🏠</span><span>{shifts.filter(s => ["DAYOFF", "VACATION"].includes(s.type)).length}</span></div>
+              <div className="footer-stat"><span className="stat-icon total">👥</span><span>{shifts.length}</span></div>
+              <div className="footer-brand">Immigration System</div>
             </div>
           </div>
-        </div>
-
-        {/* Quick Info Row */}
-        <div className="quick-row">
-          <div className="quick-item"><span>🕐</span><strong>{currentTime}</strong></div>
-          <div className="quick-item"><span>⏳</span><strong>{countdown}</strong></div>
-          <div className="quick-item"><span>📅</span><strong>{lastScheduleInfo?.date || "None"}</strong></div>
         </div>
         
           </>
@@ -4312,254 +4349,329 @@ export default function AdminPage() {
           padding: 0 20px 20px;
         }
 
-        /* Dashboard Grid - Compact */
-        .dash-grid {
+        /* Premium Dashboard Cards */
+        .premium-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 12px;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
 
-        .dash-card {
-          background: white;
-          border-radius: 16px;
-          padding: 14px;
+        .premium-card {
+          position: relative;
+          padding: 16px;
+          border-radius: 20px;
           cursor: pointer;
-          transition: all 0.2s ease;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-          border: 1px solid #e5e7eb;
+          overflow: hidden;
+          transition: all 0.3s ease;
         }
 
-        .dash-card:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        .premium-card:hover { transform: translateY(-4px) scale(1.02); }
+        .premium-card:active { transform: scale(0.98); }
+
+        .premium-card.violet { background: linear-gradient(145deg, #8b5cf6 0%, #6366f1 50%, #4f46e5 100%); }
+        .premium-card.blue { background: linear-gradient(145deg, #0ea5e9 0%, #3b82f6 50%, #2563eb 100%); }
+        .premium-card.emerald { background: linear-gradient(145deg, #10b981 0%, #059669 50%, #047857 100%); }
+        .premium-card.amber { background: linear-gradient(145deg, #f59e0b 0%, #d97706 50%, #b45309 100%); }
+
+        .card-shine {
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
+          animation: shine 3s ease-in-out infinite;
         }
 
-        .dash-card:active { transform: translateY(-1px); }
+        @keyframes shine {
+          0%, 100% { transform: translateX(-50%) translateY(-50%) rotate(0deg); }
+          50% { transform: translateX(0%) translateY(0%) rotate(0deg); }
+        }
 
-        .dash-card-top {
+        .card-top {
           display: flex;
           align-items: center;
-          gap: 12px;
-          margin-bottom: 10px;
+          gap: 10px;
+          margin-bottom: 6px;
+          position: relative;
         }
 
-        .dash-icon {
-          width: 42px;
-          height: 42px;
+        .card-icon {
+          width: 40px;
+          height: 40px;
+          background: rgba(255,255,255,0.2);
+          backdrop-filter: blur(10px);
           border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.25rem;
+          font-size: 1.2rem;
         }
 
-        .dash-icon.purple { background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
-        .dash-icon.blue { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
-        .dash-icon.green { background: linear-gradient(135deg, #34d399, #10b981); }
-        .dash-icon.orange { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
-
-        .dash-info {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .dash-num {
-          font-size: 24px;
+        .card-number {
+          font-size: 32px;
           font-weight: 800;
-          color: #1e293b;
+          color: white;
           line-height: 1;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .dash-label {
-          font-size: 11px;
-          color: #64748b;
-          margin-top: 2px;
-        }
-
-        .dash-mini-stats {
-          display: flex;
-          gap: 6px;
-          flex-wrap: wrap;
-        }
-
-        .dash-mini-stats .mini {
-          font-size: 11px;
-          padding: 4px 8px;
-          border-radius: 8px;
-          font-weight: 600;
-        }
-
-        .mini.green { background: #d1fae5; color: #059669; }
-        .mini.red { background: #fee2e2; color: #dc2626; }
-        .mini.blue { background: #dbeafe; color: #2563eb; }
-        .mini.yellow { background: #fef3c7; color: #d97706; }
-
-        .dash-shifts {
-          display: flex;
-          gap: 6px;
-          flex-wrap: wrap;
-        }
-
-        .dash-shifts .shift {
+        .card-label {
           font-size: 12px;
-          padding: 4px 8px;
-          border-radius: 8px;
-          font-weight: 600;
+          color: rgba(255,255,255,0.9);
+          font-weight: 500;
+          margin-bottom: 8px;
+          position: relative;
         }
 
-        .shift.morning { background: #fef3c7; color: #92400e; }
-        .shift.afternoon { background: #fed7aa; color: #9a3412; }
-        .shift.full { background: #dbeafe; color: #1e40af; }
-        .shift.off { background: #e5e7eb; color: #374151; }
+        .card-tags {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+          position: relative;
+        }
 
-        .dash-card.available { background: linear-gradient(135deg, #fef3c7, #fde68a); border: none; }
+        .card-tags .tag {
+          font-size: 10px;
+          padding: 4px 8px;
+          background: rgba(255,255,255,0.2);
+          backdrop-filter: blur(5px);
+          border-radius: 20px;
+          color: white;
+          font-weight: 500;
+        }
 
-        .dash-dist {
+        .card-tags .tag.success { background: rgba(16, 185, 129, 0.4); }
+        .card-tags .tag.warning { background: rgba(245, 158, 11, 0.4); }
+
+        .card-mini-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 4px;
+          position: relative;
+        }
+
+        .mini-item {
+          text-align: center;
+          padding: 6px 2px;
+          background: rgba(255,255,255,0.15);
+          border-radius: 8px;
+          color: white;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .mini-item span { font-size: 10px; display: block; margin-bottom: 2px; }
+
+        .card-split {
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 12px;
+          position: relative;
         }
 
-        .dist-item { text-align: center; }
-        .dist-num { font-size: 20px; font-weight: 800; color: #92400e; display: block; }
-        .dist-label { font-size: 10px; color: #b45309; }
-        .dist-sep { width: 1px; height: 30px; background: rgba(146, 64, 14, 0.3); }
+        .split-item { text-align: center; }
+        .split-num { font-size: 24px; font-weight: 800; color: white; }
+        .split-label { font-size: 10px; color: rgba(255,255,255,0.8); }
+        .split-divider { width: 1px; height: 36px; background: rgba(255,255,255,0.3); }
 
-        /* Share Section - Compact */
-        .share-compact {
-          background: linear-gradient(135deg, #1e3a5f, #0f172a);
-          border-radius: 16px;
-          padding: 14px;
-          margin-bottom: 12px;
-        }
-
-        .share-row {
+        /* Stats Bar */
+        .stats-bar {
           display: flex;
           gap: 8px;
           margin-bottom: 12px;
         }
 
-        .share-btn {
+        .stat-chip {
           flex: 1;
-          padding: 10px 12px;
-          border: none;
-          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 10px;
+          background: white;
+          border-radius: 12px;
           font-size: 12px;
+          font-weight: 600;
+          color: #1e293b;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .stat-chip.highlight {
+          background: linear-gradient(135deg, #fef3c7, #fde68a);
+          color: #92400e;
+        }
+
+        .chip-icon { font-size: 14px; }
+
+        /* Share Actions */
+        .share-actions {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .action-btn {
+          flex: 1;
+          padding: 12px;
+          border: none;
+          border-radius: 12px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
         }
 
-        .share-btn.green { background: #10b981; color: white; }
-        .share-btn.blue { background: #3b82f6; color: white; }
-        .share-btn.gray { background: rgba(255,255,255,0.15); color: white; }
-        .share-btn:hover { transform: translateY(-2px); opacity: 0.9; }
+        .action-btn:hover { transform: translateY(-2px); }
+        .action-btn:active { transform: scale(0.95); }
 
-        /* Schedule Card - Compact */
-        .sched-card {
-          background: linear-gradient(180deg, #1e293b, #0f172a);
-          border-radius: 12px;
-          overflow: hidden;
-        }
+        .action-btn.primary { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
+        .action-btn.success { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; }
+        .action-btn.secondary { background: #f1f5f9; color: #475569; }
 
-        .sched-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 12px;
-          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-        }
-
-        .sched-logo {
-          font-size: 1.5rem;
-          background: rgba(255,255,255,0.2);
-          padding: 6px;
-          border-radius: 8px;
-        }
-
-        .sched-title strong {
-          color: white;
-          font-size: 14px;
-          display: block;
-        }
-
-        .sched-title small {
-          color: rgba(255,255,255,0.8);
-          font-size: 11px;
-        }
-
-        .sched-body { padding: 10px; }
-
-        .sched-group {
-          background: rgba(255,255,255,0.05);
-          border-radius: 10px;
-          padding: 10px;
-          margin-bottom: 8px;
-          border-left: 3px solid;
-        }
-
-        .sched-group.morning { border-color: #fbbf24; }
-        .sched-group.afternoon { border-color: #f97316; }
-        .sched-group.fulltime { border-color: #3b82f6; }
-        .sched-group.dayoff { border-color: #94a3b8; }
-
-        .sched-group-head {
-          font-size: 12px;
-          font-weight: 600;
-          color: white;
-          margin-bottom: 6px;
-        }
-
-        .sched-group-head span {
-          background: rgba(255,255,255,0.2);
-          padding: 2px 8px;
-          border-radius: 10px;
-          margin-left: 6px;
-          font-size: 11px;
-        }
-
-        .sched-names {
-          font-size: 11px;
-          color: rgba(255,255,255,0.8);
-          line-height: 1.5;
-        }
-
-        .sched-empty {
-          text-align: center;
-          padding: 20px;
-          color: rgba(255,255,255,0.5);
-        }
-
-        .sched-footer {
-          display: flex;
-          justify-content: center;
-          gap: 16px;
-          padding: 10px;
-          background: rgba(0,0,0,0.3);
-          font-size: 12px;
-          color: rgba(255,255,255,0.8);
-        }
-
-        /* Quick Info Row */
-        .quick-row {
-          display: flex;
-          gap: 8px;
+        /* Beautiful Image Card */
+        .image-card-wrap {
           margin-bottom: 16px;
         }
 
-        .quick-item {
-          flex: 1;
-          background: white;
-          border-radius: 12px;
-          padding: 10px;
-          text-align: center;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        .image-card {
+          background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+          border-radius: 20px;
+          overflow: hidden;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         }
 
-        .quick-item span { font-size: 14px; display: block; margin-bottom: 2px; }
-        .quick-item strong { font-size: 13px; color: #1e293b; }
+        .img-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px;
+          background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+        }
+
+        .img-brand {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .brand-logo {
+          width: 44px;
+          height: 44px;
+          background: rgba(255,255,255,0.2);
+          backdrop-filter: blur(10px);
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.4rem;
+        }
+
+        .brand-title {
+          font-size: 16px;
+          font-weight: 700;
+          color: white;
+        }
+
+        .brand-subtitle {
+          font-size: 11px;
+          color: rgba(255,255,255,0.8);
+        }
+
+        .img-date {
+          text-align: center;
+          background: rgba(255,255,255,0.15);
+          backdrop-filter: blur(10px);
+          padding: 8px 14px;
+          border-radius: 14px;
+        }
+
+        .date-day { font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; }
+        .date-num { font-size: 24px; font-weight: 800; color: white; line-height: 1; }
+        .date-month { font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; }
+
+        .img-body { padding: 12px; }
+
+        .shift-section {
+          background: rgba(255,255,255,0.05);
+          border-radius: 14px;
+          padding: 12px;
+          margin-bottom: 10px;
+          border-left: 4px solid;
+        }
+
+        .shift-section.morning { border-color: #fbbf24; background: linear-gradient(90deg, rgba(251,191,36,0.1), transparent); }
+        .shift-section.afternoon { border-color: #f97316; background: linear-gradient(90deg, rgba(249,115,22,0.1), transparent); }
+        .shift-section.fulltime { border-color: #3b82f6; background: linear-gradient(90deg, rgba(59,130,246,0.1), transparent); }
+        .shift-section.dayoff { border-color: #94a3b8; background: linear-gradient(90deg, rgba(148,163,184,0.1), transparent); }
+
+        .section-head {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 10px;
+        }
+
+        .section-icon { font-size: 18px; }
+        .section-title { font-size: 13px; font-weight: 600; color: white; flex: 1; }
+        .section-count {
+          background: rgba(255,255,255,0.2);
+          padding: 2px 10px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 700;
+          color: white;
+        }
+
+        .section-names {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .name-tag {
+          background: rgba(255,255,255,0.1);
+          padding: 5px 10px;
+          border-radius: 20px;
+          font-size: 11px;
+          color: rgba(255,255,255,0.9);
+          font-weight: 500;
+        }
+
+        .no-schedule {
+          text-align: center;
+          padding: 30px;
+          color: rgba(255,255,255,0.4);
+        }
+
+        .no-icon { font-size: 40px; display: block; margin-bottom: 10px; }
+        .no-text { font-size: 14px; }
+
+        .img-footer {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 20px;
+          padding: 14px;
+          background: linear-gradient(90deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2), rgba(236,72,153,0.2));
+        }
+
+        .footer-stat {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 14px;
+          font-weight: 700;
+          color: white;
+        }
+
+        .footer-brand {
+          font-size: 10px;
+          color: rgba(255,255,255,0.5);
+          margin-left: auto;
+        }
 
         .hidden { display: none !important; }
 
