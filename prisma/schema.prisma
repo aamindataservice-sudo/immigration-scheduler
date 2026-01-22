@@ -134,3 +134,10 @@ model ShiftChoice {
   @@unique([userId, date])
   @@index([date])
 }
+
+model ScheduleLog {
+  id        String   @id @default(cuid())
+  date      DateTime @unique
+  isAuto    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

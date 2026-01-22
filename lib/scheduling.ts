@@ -50,27 +50,28 @@ export async function getAvailableOfficers(dateISO: string) {
   const date = new Date(dateISO);
   const dayOfWeek = getDayOfWeekForDate(dateISO);
   
-  const activeUsers = await prisma.user.findMany({
-    where: { isActive: true, role: "OFFICER" },
-    select: { id: true, fullName: true },
-  });
-
-  const dayOff = await prisma.weeklyDayOffPattern.findMany({
-    where: { dayOfWeek, isActive: true },
-    select: { userId: true },
-  });
-  const fullTime = await prisma.weeklyFullTimePattern.findMany({
-    where: { dayOfWeek, isActive: true },
-    select: { userId: true },
-  });
-  const vacation = await prisma.vacationRequest.findMany({
-    where: {
-      status: "APPROVED",
-      startDate: { lte: date },
-      endDate: { gte: date },
-    },
-    select: { userId: true },
-  });
+  const [activeUsers, dayOff, fullTime, vacation] = await Promise.all([
+    prisma.user.findMany({
+      where: { isActive: true, role: "OFFICER" },
+      select: { id: true, fullName: true },
+    }),
+    prisma.weeklyDayOffPattern.findMany({
+      where: { dayOfWeek, isActive: true },
+      select: { userId: true },
+    }),
+    prisma.weeklyFullTimePattern.findMany({
+      where: { dayOfWeek, isActive: true },
+      select: { userId: true },
+    }),
+    prisma.vacationRequest.findMany({
+      where: {
+        status: "APPROVED",
+        startDate: { lte: date },
+        endDate: { gte: date },
+      },
+      select: { userId: true },
+    }),
+  ]);
 
   const blocked = new Set([
     ...dayOff.map((d) => d.userId),
@@ -80,7 +81,13 @@ export async function getAvailableOfficers(dateISO: string) {
   return activeUsers.filter((u) => !blocked.has(u.id));
 }
 
-export async function generateSchedule(dateISO: string): Promise<ScheduleResult> {
+// Options for schedule generation
+export type GenerateOptions = {
+  isAuto?: boolean; // If true, auto-fill unassigned officers randomly. If false, only assign officers who chose.
+};
+
+export async function generateSchedule(dateISO: string, options: GenerateOptions = {}): Promise<ScheduleResult> {
+  const { isAuto = false } = options;
   const date = new Date(dateISO);
   const dayOfWeek = getDayOfWeekForDate(dateISO);
 
@@ -99,56 +106,60 @@ export async function generateSchedule(dateISO: string): Promise<ScheduleResult>
     });
   }
   
-  const activeUsers = await prisma.user.findMany({
-    where: { isActive: true, role: "OFFICER" },
-    select: { id: true },
-  });
-
-  // Get all pattern data for this day of week
-  const vacation = await prisma.vacationRequest.findMany({
-    where: {
-      status: "APPROVED",
-      startDate: { lte: date },
-      endDate: { gte: date },
-    },
-    select: { userId: true },
-  });
-  const locked = await prisma.weeklyLockedShiftPattern.findMany({
-    where: { dayOfWeek, isActive: true },
-    select: { userId: true, shiftType: true },
-  });
-  const dayOff = await prisma.weeklyDayOffPattern.findMany({
-    where: { dayOfWeek, isActive: true },
-    select: { userId: true },
-  });
-  const fullTime = await prisma.weeklyFullTimePattern.findMany({
-    where: { dayOfWeek, isActive: true },
-    select: { userId: true },
-  });
-  const choices = await prisma.shiftChoice.findMany({
-    where: { date },
-    select: { userId: true, choice: true },
-  });
+  // Fetch all data in parallel for speed
+  const [activeUsers, vacation, locked, dayOff, fullTime, choices] = await Promise.all([
+    prisma.user.findMany({
+      where: { isActive: true, role: "OFFICER" },
+      select: { id: true },
+    }),
+    prisma.vacationRequest.findMany({
+      where: {
+        status: "APPROVED",
+        startDate: { lte: date },
+        endDate: { gte: date },
+      },
+      select: { userId: true },
+    }),
+    prisma.weeklyLockedShiftPattern.findMany({
+      where: { dayOfWeek, isActive: true },
+      select: { userId: true, shiftType: true },
+    }),
+    prisma.weeklyDayOffPattern.findMany({
+      where: { dayOfWeek, isActive: true },
+      select: { userId: true },
+    }),
+    prisma.weeklyFullTimePattern.findMany({
+      where: { dayOfWeek, isActive: true },
+      select: { userId: true },
+    }),
+    prisma.shiftChoice.findMany({
+      where: { date },
+      select: { userId: true, choice: true },
+    }),
+  ]);
 
   const assignments = new Map<string, ShiftType>();
   const lockedUsers = new Set<string>();
 
-  // Priority order: Vacation > Locked > DayOff > FullTime
+  // Priority 1: Vacation (highest - cannot be overridden)
   for (const v of vacation) {
     assignments.set(v.userId, ShiftType.VACATION);
   }
 
+  // Priority 2: Locked patterns (admin set)
   for (const l of locked) {
     if (assignments.has(l.userId)) continue;
     assignments.set(l.userId, l.shiftType);
     lockedUsers.add(l.userId);
   }
 
+  // Priority 3: Day-off patterns
   for (const d of dayOff) {
     if (assignments.has(d.userId)) continue;
     assignments.set(d.userId, ShiftType.DAYOFF);
   }
 
+  // Priority 4: Full-time patterns
   for (const f of fullTime) {
     if (assignments.has(f.userId)) continue;
     assignments.set(f.userId, ShiftType.FULLTIME);
@@ -161,50 +172,56 @@ export async function generateSchedule(dateISO: string): Promise<ScheduleResult>
 
   const availableCount = remaining.length;
 
-  // Get officer preferences
-  const morningTargets = new Set(
-    choices.filter((c) => c.choice === ShiftType.MORNING).map((c) => c.userId)
-  );
-  const afternoonTargets = new Set(
-    choices.filter((c) => c.choice === ShiftType.AFTERNOON).map((c) => c.userId)
-  );
+  // Get officer preferences (HIGHEST PRIORITY for available officers)
+  const morningChoices = choices.filter((c) => c.choice === ShiftType.MORNING).map((c) => c.userId);
+  const afternoonChoices = choices.filter((c) => c.choice === ShiftType.AFTERNOON).map((c) => c.userId);
 
   // Count already locked morning/afternoon from patterns
   let morningCount = locked.filter((l) => l.shiftType === ShiftType.MORNING && !vacation.find(v => v.userId === l.userId)).length;
   let afternoonCount = locked.filter((l) => l.shiftType === ShiftType.AFTERNOON && !vacation.find(v => v.userId === l.userId)).length;
 
-  // First pass: Honor officer choices if quota allows
-  for (const id of remaining) {
-    if (morningCount < rule.morningLimit && morningTargets.has(id)) {
-      morningCount++;
-      assignments.set(id, ShiftType.MORNING);
-    }
-  }
-  for (const id of remaining) {
+  // Priority 5: Officer CHOICES (these have priority over system assignment)
+  // Morning choices first
+  for (const id of morningChoices) {
     if (assignments.has(id)) continue;
-    if (afternoonCount < rule.afternoonLimit && afternoonTargets.has(id)) {
-      afternoonCount++;
-      assignments.set(id, ShiftType.AFTERNOON);
-    }
-  }
-
-  // Second pass: Randomly assign remaining officers to fill morning first, then afternoon
-  const unassigned = remaining.filter((id) => !assignments.has(id));
-  const shuffled = shuffle(unassigned);
-
-  for (const id of shuffled) {
+    if (!remaining.includes(id)) continue;
     if (morningCount < rule.morningLimit) {
       morningCount++;
       assignments.set(id, ShiftType.MORNING);
-    } else if (afternoonCount < rule.afternoonLimit) {
-      afternoonCount++;
-      assignments.set(id, ShiftType.AFTERNOON);
-    } else {
-      // If both are full but we still have officers, add them to afternoon (overflow)
+    }
+  }
+  
+  // Afternoon choices
+  for (const id of afternoonChoices) {
+    if (assignments.has(id)) continue;
+    if (!remaining.includes(id)) continue;
+    if (afternoonCount < rule.afternoonLimit) {
       afternoonCount++;
       assignments.set(id, ShiftType.AFTERNOON);
     }
   }
+
+  // Priority 6: System auto-assignment (ONLY if isAuto is true)
+  // This only happens during auto-scheduling, not manual admin generation
+  if (isAuto) {
+    const unassigned = remaining.filter((id) => !assignments.has(id));
+    const shuffled = shuffle(unassigned);
+
+    for (const id of shuffled) {
+      if (morningCount < rule.morningLimit) {
+        morningCount++;
+        assignments.set(id, ShiftType.MORNING);
+      } else if (afternoonCount < rule.afternoonLimit) {
+        afternoonCount++;
+        assignments.set(id, ShiftType.AFTERNOON);
+      } else {
+        // If both are full but we still have officers, add them to afternoon (overflow)
+        afternoonCount++;
+        assignments.set(id, ShiftType.AFTERNOON);
+      }
+    }
+  }
+  // If not auto, unassigned officers stay unassigned (they didn't choose)
 
   // Delete existing shifts and create new ones
   await prisma.shift.deleteMany({ where: { date } });

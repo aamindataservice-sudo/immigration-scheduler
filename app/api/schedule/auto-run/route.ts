@@ -29,7 +29,16 @@ export async function POST() {
       return NextResponse.json({ ok: true, ran: false, reason: "Schedule exists", date: dateISO });
     }
 
-    const result = await generateSchedule(dateISO);
+    // Auto-run: fill ALL remaining officers (isAuto: true)
+    const result = await generateSchedule(dateISO, { isAuto: true });
+    
+    // Log as automatic schedule
+    await prisma.scheduleLog.upsert({
+      where: { date: new Date(dateISO) },
+      update: { isAuto: true, createdAt: new Date() },
+      create: { date: new Date(dateISO), isAuto: true },
+    });
+    
     return NextResponse.json({ ok: true, ran: true, result });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message ?? "Error" }, { status: 500 });

@@ -24,10 +24,22 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const date = String(body?.date ?? "");
+    const isAuto = body?.isAuto === true;
     if (!date) {
       return NextResponse.json({ ok: false, error: "Date required" }, { status: 400 });
     }
-    const result = await generateSchedule(date);
+    
+    // Manual generation (admin): only assign officers who CHOSE their shift
+    // Auto generation: fill all remaining slots randomly
+    const result = await generateSchedule(date, { isAuto });
+    
+    // Log the schedule creation
+    await prisma.scheduleLog.upsert({
+      where: { date: new Date(date) },
+      update: { isAuto, createdAt: new Date() },
+      create: { date: new Date(date), isAuto },
+    });
+    
     return NextResponse.json({ ok: true, result });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message ?? "Error" }, { status: 500 });
