@@ -2,15 +2,33 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { normalizePhone } from "@/lib/phone";
+import { ensureRolePolicies, ensureUserPrivileges, logAudit } from "@/lib/audit";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const requesterId = String(body?.requesterId ?? "").trim();
+    if (!requesterId) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
+    }
+    const requester = await prisma.user.findUnique({ where: { id: requesterId } });
+    if (!requester) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
+    }
+
     const fullName = String(body?.fullName ?? "").trim();
     const phone = normalizePhone(body?.phone ?? "");
-    const role = body?.role === "ADMIN" ? "ADMIN" : "OFFICER";
+    const requestedRole = String(body?.role ?? "").toUpperCase();
+    const role =
+      requestedRole === "SUPER_ADMIN"
+        ? "SUPER_ADMIN"
+        : requestedRole === "ADMIN"
+        ? "ADMIN"
+        : requestedRole === "CHECKER"
+        ? "CHECKER"
+        : "OFFICER";
     const password = String(body?.password ?? "").trim();
-    const defaultPassword = role === "ADMIN" ? "admin123" : "officer123";
+    const defaultPassword = role === "ADMIN" ? "admin123" : role === "CHECKER" ? "checker123" : "officer123";
     const finalPassword = password || defaultPassword;
 
     if (!fullName) {
@@ -23,6 +41,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Password required" }, { status: 400 });
     }
 
+    // Super Admin bypasses all checks; others must obey policy and cannot create Super Admin
+    if (role === "SUPER_ADMIN" && requester.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ ok: false, error: "Only Super Admin can create Super Admin" }, { status: 403 });
+    }
+
+    if (requester.role !== "SUPER_ADMIN") {
+      const privilege = await prisma.userPrivilege.findUnique({ where: { userId: requesterId } });
+      if (!privilege?.canCreateUser) {
+        return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
+      }
+      await ensureRolePolicies();
+      const policy = await prisma.roleCreationPolicy.findUnique({ where: { role } });
+      if (!policy?.isAllowed) {
+        return NextResponse.json({ ok: false, error: `Role ${role} creation is not allowed` }, { status: 403 });
+      }
+    }
+
     const user = await prisma.user.create({
       data: {
         fullName,
@@ -30,8 +65,19 @@ export async function POST(req: Request) {
         role,
         passwordHash: hashPassword(finalPassword),
         mustChangePassword: true,
+        createdBy: requester.id,
       },
     });
+    await ensureUserPrivileges(user.id, role);
+
+    await logAudit({
+      actorId: requester.id,
+      action: "user.create",
+      targetType: "User",
+      targetId: user.id,
+      metadata: { role, phone },
+    });
+
     return NextResponse.json({
       ok: true,
       user: {

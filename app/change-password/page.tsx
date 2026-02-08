@@ -1,27 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
   const [user, setUser] = useState<any | null>(null);
+  const [ready, setReady] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const raw = localStorage.getItem("currentUser");
     if (!raw) {
-      router.push("/");
+      if (!hasRedirected.current) {
+        hasRedirected.current = true;
+        router.replace("/");
+      }
       return;
     }
-    const parsed = JSON.parse(raw);
-    setUser(parsed);
-    if (!parsed.mustChangePassword) {
-      router.push(parsed.role === "ADMIN" ? "/admin" : "/officer");
+    try {
+      const parsed = JSON.parse(raw);
+      setUser(parsed);
+    } catch {
+      if (!hasRedirected.current) {
+        hasRedirected.current = true;
+        router.replace("/");
+      }
+    } finally {
+      setReady(true);
     }
   }, [router]);
 
@@ -53,7 +65,10 @@ export default function ChangePasswordPage() {
         return;
       }
       localStorage.setItem("currentUser", JSON.stringify(data.user));
-      router.push(data.user.role === "ADMIN" ? "/admin" : "/officer");
+      if (data.user.role === "ADMIN") router.push("/admin");
+      else if (data.user.role === "CHECKER") router.push("/workspace");
+      else if (data.user.role === "SUPER_ADMIN") router.push("/super-admin");
+      else router.push("/officer");
     } catch (err: any) {
       setError(err?.message ?? "Failed to update password.");
     } finally {
@@ -65,6 +80,20 @@ export default function ChangePasswordPage() {
     localStorage.removeItem("currentUser");
     router.push("/");
   };
+
+  if (!ready) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card">
+          <p style={{ margin: 0, color: "#64748b", fontSize: "1rem" }}>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="auth-container">

@@ -127,7 +127,7 @@ export async function GET(req: Request) {
       lines = [
         `${greeting}`,
         ``,
-        `🛫 *IMMIGRATION DAILY SCHEDULE*`,
+        `🇸🇴 *IMMIGRATION DAILY SCHEDULE*`,
         `_Jadwalka Maalmeed ee Socdaalka_`,
         ``,
         `📅 *${dayName}*`,

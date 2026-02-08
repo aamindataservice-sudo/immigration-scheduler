@@ -11,7 +11,9 @@ datasource db {
 }
 
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
+  CHECKER
   OFFICER
 }
 
@@ -33,6 +35,7 @@ model User {
   mustChangePassword Boolean @default(true)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  createdBy         String?
 
   shifts            Shift[]
   vacationRequests  VacationRequest[]
@@ -40,6 +43,9 @@ model User {
   weeklyFullTime    WeeklyFullTimePattern[]
   weeklyLocked      WeeklyLockedShiftPattern[]
   shiftChoices      ShiftChoice[]
+  paymentChecks     PaymentCheck[]
+  auditLogs        AuditLog[]
+  privilege        UserPrivilege?
 }
 
 model Shift {
@@ -140,4 +146,86 @@ model ScheduleLog {
   date      DateTime @unique
   isAuto    Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+enum PaymentType {
+  PAYMENT_RECEIPT
+  EVISA
+}
+
+enum PaymentStatus {
+  FOUND
+  NOT_FOUND
+  ERROR
+}
+
+model RoleCreationPolicy {
+  id         String   @id @default(cuid())
+  role       UserRole @unique
+  isAllowed  Boolean  @default(true) // allow create by non-super
+  allowUpdate Boolean @default(true)
+  allowDeactivate Boolean @default(true)
+  allowDelete Boolean @default(false)
+  allowPasswordReset Boolean @default(true)
+  updatedAt  DateTime @updatedAt
+  updatedBy  String?
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([actorId])
+}
+
+model UserPrivilege {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  canCheckPayment       Boolean  @default(false)
+  canCheckEVisa         Boolean  @default(false)
+  canDownloadReceipt    Boolean  @default(false)
+  canViewPaymentHistory Boolean  @default(false)
+  canCreateUser         Boolean  @default(false)
+  canUpdateUser         Boolean  @default(false)
+  canDeleteUser         Boolean  @default(false)
+  canResetPassword      Boolean  @default(false)
+  canManageRoles        Boolean  @default(false)
+  canManagePrivileges   Boolean  @default(false)
+  canViewAuditLogs      Boolean  @default(false)
+  canExportUsers        Boolean  @default(false)
+  canManageSchedules    Boolean  @default(false)
+  canManagePatterns     Boolean  @default(false)
+  canApproveVacations   Boolean  @default(false)
+  canManageSettings     Boolean  @default(false)
+  canViewReports        Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PaymentCheck {
+  id            String        @id @default(cuid())
+  type          PaymentType
+  serialNumber  String?
+  passportNumber String?
+  referenceNumber String?
+  visaYear      String?
+  visaMonth     String?
+  status        PaymentStatus
+  resultUrl     String?
+  checkedBy     String
+  checkedByUser User          @relation(fields: [checkedBy], references: [id], onDelete: Cascade)
+  createdAt     DateTime      @default(now())
+  
+  @@index([checkedBy])
+  @@index([createdAt])
 }

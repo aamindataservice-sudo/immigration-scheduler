@@ -1,0 +1,1431 @@
+"use client";
+
+import { useEffect, useState, Component, ReactNode, lazy, Suspense } from "react";
+import { useRouter } from "next/navigation";
+import SidebarLayout from "@/components/SidebarLayout";
+
+const CheckerUI = lazy(() => import("@/components/CheckerUI"));
+
+class CheckerErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError = () => ({ hasError: true });
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, background: "#eef1f5", gap: 16 }}>
+          <p style={{ margin: 0, fontSize: "1rem", color: "#374151", textAlign: "center" }}>Something went wrong. Try again or log out.</p>
+          <button type="button" onClick={() => this.setState({ hasError: false })} style={{ padding: "12px 24px", borderRadius: 12, border: "none", background: "#2563eb", color: "#fff", fontWeight: 600, cursor: "pointer" }}>Try again</button>
+          <button type="button" onClick={() => { localStorage.removeItem("currentUser"); window.location.href = "/"; }} style={{ padding: "12px 24px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff", color: "#374151", cursor: "pointer" }}>Log out</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function WorkspacePage() {
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState<any | null>(null);
+  const [privilege, setPrivilege] = useState<any>(null);
+  const [activeSection, setActiveSection] = useState<string>("dashboard");
+  const [currentTime, setCurrentTime] = useState("--:-- --");
+  const [message, setMessage] = useState("");
+  
+  // Payment checker state
+  const [serialNumber, setSerialNumber] = useState("");
+  const [loading, setLoading] = useState(false);
+  
+  // User management state
+  const [users, setUsers] = useState<any[]>([]);
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserPhone, setNewUserPhone] = useState("252");
+  const [newUserRole, setNewUserRole] = useState("OFFICER");
+  const [selectedEditUser, setSelectedEditUser] = useState<any>(null);
+  
+  // E-Visa state
+  const [passportNumber, setPassportNumber] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [visaYear, setVisaYear] = useState("2025");
+  const [visaMonth, setVisaMonth] = useState("Jan");
+  
+  // Payment checks history
+  const [paymentChecks, setPaymentChecks] = useState<any[]>([]);
+  
+  // Audit logs
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  
+  // Scheduling
+  const [scheduleDate, setScheduleDate] = useState(new Date().toISOString().slice(0, 10));
+  const [shifts, setShifts] = useState<any[]>([]);
+  const [morningLimit, setMorningLimit] = useState<number | "">("");
+  
+  // Patterns
+  const [dayOffPatterns, setDayOffPatterns] = useState<any[]>([]);
+  const [fullTimePatterns, setFullTimePatterns] = useState<any[]>([]);
+  
+  // Vacations
+  const [vacations, setVacations] = useState<any[]>([]);
+  
+  // Settings
+  const [autoTime, setAutoTime] = useState("19:00");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    let raw: string | null = null;
+    try {
+      raw = typeof window !== "undefined" ? localStorage.getItem("currentUser") : null;
+    } catch {
+      router.push("/");
+      return;
+    }
+    if (!raw) {
+      router.push("/");
+      return;
+    }
+    let parsed: any;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      router.push("/");
+      return;
+    }
+    if (parsed.mustChangePassword) {
+      router.push("/change-password");
+      return;
+    }
+    setUser(parsed);
+    
+    // Fetch privileges
+    fetch(`/api/auth/my-privileges?userId=${parsed.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok && data.privilege) {
+          setPrivilege(data.privilege);
+        }
+      });
+  }, [router]);
+
+  useEffect(() => {
+    const updateTime = () => {
+      try {
+        const parts = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Africa/Mogadishu",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        }).formatToParts(new Date());
+        const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+        const dayPeriod = get("dayPeriod") || "";
+        setCurrentTime(`${get("hour")}:${get("minute")} ${dayPeriod.toUpperCase()}`);
+      } catch {
+        setCurrentTime("--:-- --");
+      }
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const loadUsers = async () => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch(`/api/users/list?requesterId=${user.id}`);
+      const data = await res.json();
+      if (data.ok) {
+        setUsers(data.users);
+      }
+    } catch (err) {
+      console.error("Failed to load users:", err);
+    }
+  };
+
+  const checkPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) return;
+    setMessage("");
+    setLoading(true);
+    
+    try {
+      const res = await fetch("/api/payment/download-receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serialNumber, checkedBy: user.id }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        const check = data.check;
+        const targetUrl = check.localPath || check.receiptUrl;
+        if (targetUrl) {
+          window.open(targetUrl, "_blank");
+        }
+        setSerialNumber("");
+      } else {
+        setMessage(`❌ ${data.error || "Failed to check payment"}`);
+      }
+    } catch (err: any) {
+      setMessage(`❌ ${err?.message || "Error checking payment"}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch("/api/users/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: newUserName,
+          phone: newUserPhone,
+          role: newUserRole,
+          requesterId: user?.id,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setMessage("✅ User created successfully");
+        setShowCreateUser(false);
+        setNewUserName("");
+        setNewUserPhone("252");
+        loadUsers();
+      } else {
+        setMessage("❌ " + (data.error || "Failed"));
+      }
+    } catch (err: any) {
+      setMessage("❌ " + (err?.message || "Failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    if (!confirm("Delete this user?")) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/users/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: userId, requesterId: user?.id }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setMessage("✅ User deleted");
+        loadUsers();
+      } else {
+        setMessage("❌ " + (data.error || "Failed"));
+      }
+    } catch (err: any) {
+      setMessage("❌ " + (err?.message || "Failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async (userId: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/users/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: userId, requesterId: user?.id }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setMessage("✅ Password reset");
+      } else {
+        setMessage("❌ " + (data.error || "Failed"));
+      }
+    } catch (err: any) {
+      setMessage("❌ " + (err?.message || "Failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateUser = async (userId: string, updates: any) => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/users/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: userId, ...updates, requesterId: user?.id }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setMessage("✅ User updated");
+        loadUsers();
+        setSelectedEditUser(null);
+      } else {
+        setMessage("❌ " + (data.error || "Failed"));
+      }
+    } catch (err: any) {
+      setMessage("❌ " + (err?.message || "Failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkEvisa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) return;
+    setMessage("");
+    setLoading(true);
+    
+    try {
+      const res = await fetch("/api/payment/check-evisa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          passportNumber,
+          referenceNumber,
+          visaYear,
+          visaMonth,
+          checkedBy: user.id,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        const check = data.check;
+        if (check.status === "FOUND" && check.visaUrl) {
+          window.open(check.visaUrl, "_blank");
+          setMessage("✅ " + check.message);
+        } else {
+          setMessage("❌ " + check.message);
+        }
+        setPassportNumber("");
+        setReferenceNumber("");
+      } else {
+        setMessage("❌ " + (data.error || "Failed"));
+      }
+    } catch (err: any) {
+      setMessage("❌ " + (err?.message || "Failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadPaymentHistory = async () => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch(`/api/payment/history?userId=${user.id}`);
+      const data = await res.json();
+      if (data.ok) {
+        setPaymentChecks(data.checks || []);
+      }
+    } catch (err) {
+      console.error("Failed to load payment history:", err);
+    }
+  };
+
+  const loadAuditLogs = async () => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch(`/api/audit/logs?requesterId=${user.id}&limit=100`);
+      const data = await res.json();
+      if (data.ok) {
+        setAuditLogs(data.logs || []);
+      }
+    } catch (err) {
+      console.error("Failed to load audit logs:", err);
+    }
+  };
+
+  const loadSchedule = async () => {
+    try {
+      const res = await fetch(`/api/shifts?date=${scheduleDate}`);
+      const data = await res.json();
+      if (data.ok) {
+        setShifts(data.shifts || []);
+      }
+    } catch (err) {
+      console.error("Failed to load schedule:", err);
+    }
+  };
+
+  const loadPatterns = async () => {
+    try {
+      const [dayRes, fullRes] = await Promise.all([
+        fetch("/api/patterns/dayoff").then((r) => r.json()),
+        fetch("/api/patterns/fulltime").then((r) => r.json()),
+      ]);
+      if (dayRes.ok) setDayOffPatterns(dayRes.patterns || []);
+      if (fullRes.ok) setFullTimePatterns(fullRes.patterns || []);
+    } catch (err) {
+      console.error("Failed to load patterns:", err);
+    }
+  };
+
+  const loadVacations = async () => {
+    try {
+      const res = await fetch("/api/vacations/list");
+      const data = await res.json();
+      if (data.ok) {
+        setVacations(data.vacations || []);
+      }
+    } catch (err) {
+      console.error("Failed to load vacations:", err);
+    }
+  };
+
+  const approveVacation = async (vacationId: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/vacations/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: vacationId, status: "APPROVED" }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setMessage("✅ Vacation approved");
+        loadVacations();
+      } else {
+        setMessage("❌ " + (data.error || "Failed"));
+      }
+    } catch (err: any) {
+      setMessage("❌ " + (err?.message || "Failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveSettings = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/settings/auto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoTime24: autoTime }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setMessage("✅ Settings saved");
+      } else {
+        setMessage("❌ " + (data.error || "Failed"));
+      }
+    } catch (err: any) {
+      setMessage("❌ " + (err?.message || "Failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem("currentUser");
+    router.push("/");
+  };
+
+  if (!user) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%)" }}>
+        <div style={{ color: "white", fontSize: "18px" }}>Loading...</div>
+      </div>
+    );
+  }
+
+  if (user.role === "CHECKER") {
+    if (!mounted) {
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%)" }}>
+          <div style={{ color: "white", fontSize: "18px" }}>Loading...</div>
+        </div>
+      );
+    }
+    return (
+      <CheckerErrorBoundary>
+        <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#eef1f5" }}><div style={{ fontSize: "1rem", color: "#374151" }}>Loading checker...</div></div>}>
+          <CheckerUI user={user} />
+        </Suspense>
+      </CheckerErrorBoundary>
+    );
+  }
+
+  if (!privilege) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%)" }}>
+        <div style={{ color: "white", fontSize: "18px" }}>Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <SidebarLayout
+      user={user}
+      privilege={privilege}
+      activeSection={activeSection}
+      onSectionChange={setActiveSection}
+      currentTime={currentTime}
+    >
+      {message && (
+        <div className="toast" onClick={() => setMessage("")}>
+          {message}
+        </div>
+      )}
+
+      <div className="workspace-content">
+        {/* Menu View */}
+        {activeSection === "menu" && (
+          <div className="menu-view">
+            <h2 className="page-title">My Workspace</h2>
+            <p className="page-subtitle">Select a feature to continue</p>
+            <div className="features-grid">
+              {privilege.canCheckPayment && (
+                <div className="feature-card" onClick={() => setActiveSection("payment")}>
+                  <div className="feature-icon">💳</div>
+                  <div className="feature-title">Check Payment</div>
+                  <div className="feature-desc">Verify payment receipts</div>
+                </div>
+              )}
+
+              {privilege.canCheckEVisa && (
+                <div className="feature-card" onClick={() => setActiveSection("evisa")}>
+                  <div className="feature-icon">📄</div>
+                  <div className="feature-title">Check E-Visa</div>
+                  <div className="feature-desc">Verify e-Visa status</div>
+                </div>
+              )}
+
+              {(privilege.canCreateUser || privilege.canUpdateUser || privilege.canDeleteUser) && (
+                <div className="feature-card" onClick={() => { loadUsers(); setActiveSection("users"); }}>
+                  <div className="feature-icon">👥</div>
+                  <div className="feature-title">Manage Users</div>
+                  <div className="feature-desc">User management</div>
+                </div>
+              )}
+
+              {privilege.canResetPassword && (
+                <div className="feature-card" onClick={() => { loadUsers(); setActiveSection("passwords"); }}>
+                  <div className="feature-icon">🔑</div>
+                  <div className="feature-title">Reset Passwords</div>
+                  <div className="feature-desc">Reset user passwords</div>
+                </div>
+              )}
+
+              {privilege.canManageSchedules && (
+                <div className="feature-card" onClick={() => { loadSchedule(); setActiveSection("schedules"); }}>
+                  <div className="feature-icon">📅</div>
+                  <div className="feature-title">Manage Schedules</div>
+                  <div className="feature-desc">Create & view shifts</div>
+                </div>
+              )}
+
+              {privilege.canManagePatterns && (
+                <div className="feature-card" onClick={() => { loadPatterns(); setActiveSection("patterns"); }}>
+                  <div className="feature-icon">🔄</div>
+                  <div className="feature-title">Manage Patterns</div>
+                  <div className="feature-desc">Weekly rules</div>
+                </div>
+              )}
+
+              {privilege.canApproveVacations && (
+                <div className="feature-card" onClick={() => { loadVacations(); setActiveSection("vacations"); }}>
+                  <div className="feature-icon">🏖️</div>
+                  <div className="feature-title">Approve Vacations</div>
+                  <div className="feature-desc">Manage leave requests</div>
+                </div>
+              )}
+
+              {privilege.canManageSettings && (
+                <div className="feature-card" onClick={() => setActiveSection("settings")}>
+                  <div className="feature-icon">⚙️</div>
+                  <div className="feature-title">Manage Settings</div>
+                  <div className="feature-desc">Auto-schedule config</div>
+                </div>
+              )}
+
+              {privilege.canViewPaymentHistory && (
+                <div className="feature-card" onClick={() => { loadPaymentHistory(); setActiveSection("payment-history"); }}>
+                  <div className="feature-icon">📊</div>
+                  <div className="feature-title">Payment History</div>
+                  <div className="feature-desc">View all checks</div>
+                </div>
+              )}
+
+              {privilege.canViewAuditLogs && (
+                <div className="feature-card" onClick={() => { loadAuditLogs(); setActiveSection("audit"); }}>
+                  <div className="feature-icon">📑</div>
+                  <div className="feature-title">Audit Logs</div>
+                  <div className="feature-desc">Activity history</div>
+                </div>
+              )}
+
+              {privilege.canExportUsers && (
+                <div className="feature-card" onClick={() => window.open(`/api/users/export?requesterId=${user.id}`, "_blank")}>
+                  <div className="feature-icon">⬇️</div>
+                  <div className="feature-title">Export Users</div>
+                  <div className="feature-desc">Download CSV</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Payment Check Section */}
+        {activeSection === "payment" && (
+          <div className="section-view">
+            <h2 className="section-title">💳 Payment Verification</h2>
+            <p className="section-subtitle">Enter serial number to verify payment receipt</p>
+            <div className="card">
+              <form onSubmit={checkPayment}>
+                <div className="form-group">
+                  <label className="form-label">Serial Number</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={serialNumber}
+                    onChange={(e) => setSerialNumber(e.target.value)}
+                    placeholder="e.g. 1763816489"
+                    pattern="[0-9]*"
+                    inputMode="numeric"
+                    required
+                  />
+                </div>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? "🔄 Checking..." : "🔍 Check Payment"}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* E-Visa Check Section */}
+        {activeSection === "check-evisa" && (
+          <div className="section-view">
+            <h2 className="section-title">📄 E-Visa Verification</h2>
+            <p className="section-subtitle">Check if e-Visa PDF is ready for download</p>
+            <div className="card">
+              <form onSubmit={checkEvisa}>
+                <div className="form-group">
+                  <label className="form-label">Passport Number</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={passportNumber}
+                    onChange={(e) => setPassportNumber(e.target.value.toUpperCase())}
+                    placeholder="e.g. NXBRJ51J6"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Reference Number</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={referenceNumber}
+                    onChange={(e) => setReferenceNumber(e.target.value)}
+                    placeholder="e.g. 1764136564"
+                    pattern="[0-9]*"
+                    inputMode="numeric"
+                    required
+                  />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Month</label>
+                    <select className="input" value={visaMonth} onChange={(e) => setVisaMonth(e.target.value)}>
+                      {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Year</label>
+                    <select className="input" value={visaYear} onChange={(e) => setVisaYear(e.target.value)}>
+                      {["2025", "2026", "2027"].map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? "🔄 Checking..." : "🔍 Check E-Visa"}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Users Management Section */}
+        {activeSection === "users-list" && (
+          <div className="section-view">
+            <div className="section-header">
+              <h2 className="section-title">👥 User Management</h2>
+              {privilege.canCreateUser && (
+                <button className="btn-create" onClick={() => setShowCreateUser(true)}>
+                  ➕ Create User
+                </button>
+              )}
+            </div>
+
+            {showCreateUser && (
+              <div className="modal-overlay" onClick={() => setShowCreateUser(false)}>
+                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                  <div className="modal-header">
+                    <h3>Create New User</h3>
+                    <button className="close-btn" onClick={() => setShowCreateUser(false)}>✕</button>
+                  </div>
+                  <form onSubmit={createUser}>
+                    <div className="form-group">
+                      <label className="form-label">Full Name</label>
+                      <input
+                        type="text"
+                        className="input"
+                        value={newUserName}
+                        onChange={(e) => setNewUserName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Phone</label>
+                      <input
+                        type="text"
+                        className="input"
+                        value={newUserPhone}
+                        onChange={(e) => setNewUserPhone(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Role</label>
+                      <select className="input" value={newUserRole} onChange={(e) => setNewUserRole(e.target.value)}>
+                        <option value="OFFICER">Officer</option>
+                        <option value="CHECKER">Checker</option>
+                        <option value="ADMIN">Admin</option>
+                      </select>
+                    </div>
+                    <div className="modal-actions">
+                      <button type="button" className="btn-secondary" onClick={() => setShowCreateUser(false)}>
+                        Cancel
+                      </button>
+                      <button type="submit" className="btn-primary" disabled={loading}>
+                        {loading ? "Creating..." : "Create User"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            <div className="card">
+              <div className="users-list">
+                {users.map((u) => (
+                  <div key={u.id} className="user-item">
+                    <div className="user-avatar-sm">{u.fullName?.charAt(0) || "?"}</div>
+                    <div className="user-details">
+                      <div className="user-name">{u.fullName}</div>
+                      <div className="user-meta">{u.phone} • {u.role}</div>
+                    </div>
+                    <span className={`status-badge ${u.isActive ? "active" : "inactive"}`}>
+                      {u.isActive ? "Active" : "Inactive"}
+                    </span>
+                    <div className="action-btns">
+                      {privilege.canUpdateUser && (
+                        <button
+                          className="btn-small"
+                          onClick={() =>
+                            updateUser(u.id, { isActive: !u.isActive })
+                          }
+                        >
+                          {u.isActive ? "Deactivate" : "Activate"}
+                        </button>
+                      )}
+                      {privilege.canDeleteUser && (
+                        <button className="btn-small danger" onClick={() => deleteUser(u.id)}>
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Password Reset Section */}
+        {activeSection === "reset-passwords" && (
+          <div className="section-view">
+            <h2 className="section-title">🔑 Reset Passwords</h2>
+            <p className="section-subtitle">Reset passwords for users</p>
+            <div className="card">
+              <div className="users-list">
+                {users.map((u) => (
+                  <div key={u.id} className="user-item">
+                    <div className="user-avatar-sm">{u.fullName?.charAt(0) || "?"}</div>
+                    <div className="user-details">
+                      <div className="user-name">{u.fullName}</div>
+                      <div className="user-meta">{u.phone} • {u.role}</div>
+                    </div>
+                    <button className="btn-primary" onClick={() => resetPassword(u.id)}>
+                      Reset Password
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Payment History Section */}
+        {activeSection === "payment-history" && (
+          <div className="section-view">
+            <h2 className="section-title">📊 Payment History</h2>
+            <p className="section-subtitle">All payment and e-visa checks</p>
+            <div className="card">
+              {paymentChecks.length === 0 ? (
+                <div className="empty-state">No checks yet</div>
+              ) : (
+                <div className="checks-list">
+                  {paymentChecks.map((check) => (
+                    <div key={check.id} className="check-item">
+                      <div className="check-type">
+                        {check.type === "PAYMENT_RECEIPT" ? "💳 Payment" : "📄 E-Visa"}
+                      </div>
+                      <div className="check-details">
+                        {check.serialNumber && <div><strong>Serial:</strong> {check.serialNumber}</div>}
+                        {check.passportNumber && <div><strong>Passport:</strong> {check.passportNumber}</div>}
+                        <div><strong>Status:</strong> {check.status}</div>
+                        <div><strong>Checked by:</strong> {check.checkedByUser?.fullName}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Audit Logs Section */}
+        {activeSection === "audit-logs" && (
+          <div className="section-view">
+            <h2 className="section-title">📑 Audit Logs</h2>
+            <p className="section-subtitle">Recent activity history</p>
+            <div className="card">
+              {auditLogs.length === 0 ? (
+                <div className="empty-state">No logs yet</div>
+              ) : (
+                <div className="logs-list">
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className="log-item">
+                      <div className="log-action">{log.action}</div>
+                      <div className="log-meta">
+                        {log.actor?.fullName || "System"} • {new Date(log.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Manage Schedules Section */}
+        {activeSection === "schedules" && (
+          <div className="section-view">
+            <h2 className="section-title">📅 Manage Schedules</h2>
+            <p className="section-subtitle">View and manage officer shifts</p>
+            <div className="card">
+              <div className="form-group">
+                <label className="form-label">Select Date</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={scheduleDate}
+                  onChange={(e) => {
+                    setScheduleDate(e.target.value);
+                    loadSchedule();
+                  }}
+                />
+              </div>
+              <button className="btn-primary" onClick={loadSchedule}>
+                Load Schedule
+              </button>
+              <div className="shifts-list" style={{ marginTop: 20 }}>
+                {shifts.length === 0 ? (
+                  <div className="empty-state">No shifts for this date</div>
+                ) : (
+                  shifts.map((shift) => (
+                    <div key={shift.id} className="shift-item">
+                      <div className="shift-type">{shift.type}</div>
+                      <div className="shift-user">{shift.user?.fullName || "Unassigned"}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <button className="btn-secondary" style={{ marginTop: 16 }} onClick={() => router.push("/admin")}>
+                Open Full Scheduler
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Manage Patterns Section */}
+        {activeSection === "patterns" && (
+          <div className="section-view">
+            <h2 className="section-title">🔄 Manage Patterns</h2>
+            <p className="section-subtitle">Weekly day-off and full-time patterns</p>
+            <div className="card">
+              <h3 style={{ marginBottom: 12, color: "#1e293b" }}>Day-Off Patterns</h3>
+              {dayOffPatterns.length === 0 ? (
+                <div className="empty-state">No day-off patterns</div>
+              ) : (
+                <div className="patterns-list">
+                  {dayOffPatterns.map((p) => (
+                    <div key={p.id} className="pattern-item">
+                      Day {p.dayOfWeek} - User {p.userId}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <h3 style={{ marginTop: 20, marginBottom: 12, color: "#1e293b" }}>Full-Time Patterns</h3>
+              {fullTimePatterns.length === 0 ? (
+                <div className="empty-state">No full-time patterns</div>
+              ) : (
+                <div className="patterns-list">
+                  {fullTimePatterns.map((p) => (
+                    <div key={p.id} className="pattern-item">
+                      Day {p.dayOfWeek} - User {p.userId}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button className="btn-secondary" style={{ marginTop: 16 }} onClick={() => router.push("/admin")}>
+                Open Full Pattern Manager
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Approve Vacations Section */}
+        {activeSection === "vacations" && (
+          <div className="section-view">
+            <h2 className="section-title">🏖️ Approve Vacations</h2>
+            <p className="section-subtitle">Review and approve leave requests</p>
+            <div className="card">
+              {vacations.length === 0 ? (
+                <div className="empty-state">No vacation requests</div>
+              ) : (
+                <div className="vacations-list">
+                  {vacations.map((v) => (
+                    <div key={v.id} className="vacation-item">
+                      <div className="vacation-details">
+                        <div className="vacation-user">{v.user?.fullName || "Unknown"}</div>
+                        <div className="vacation-dates">
+                          {new Date(v.startDate).toLocaleDateString()} - {new Date(v.endDate).toLocaleDateString()}
+                        </div>
+                        <div className={`vacation-status ${v.status.toLowerCase()}`}>
+                          {v.status}
+                        </div>
+                      </div>
+                      {v.status === "PENDING" && (
+                        <button className="btn-primary" onClick={() => approveVacation(v.id)}>
+                          Approve
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Settings Section */}
+        {activeSection === "settings" && (
+          <div className="section-view">
+            <h2 className="section-title">⚙️ Auto-Schedule Settings</h2>
+            <p className="section-subtitle">Configure automatic scheduling time</p>
+            <div className="card">
+              <div className="form-group">
+                <label className="form-label">Auto-Schedule Time (24h format)</label>
+                <input
+                  type="time"
+                  className="input"
+                  value={autoTime}
+                  onChange={(e) => setAutoTime(e.target.value)}
+                />
+              </div>
+              <button className="btn-primary" onClick={saveSettings} disabled={loading}>
+                {loading ? "Saving..." : "Save Settings"}
+              </button>
+            </div>
+          </div>
+        )}
+
+      <style jsx>{`
+        .workspace-content {
+          width: 100%;
+        }
+
+        .dashboard-overview {
+          animation: fadeIn 0.3s ease;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
+          margin-top: 20px;
+        }
+
+        .stat-card {
+          background: white;
+          border-radius: 16px;
+          padding: 20px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+          text-align: center;
+          transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+          transform: translateY(-4px);
+        }
+
+        .stat-icon {
+          font-size: 2.5rem;
+          margin-bottom: 8px;
+        }
+
+        .stat-label {
+          font-size: 0.9rem;
+          color: #64748b;
+          margin-bottom: 4px;
+        }
+
+        .stat-value {
+          font-size: 2rem;
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+
+        .toast {
+          position: fixed;
+          top: 16px;
+          right: 16px;
+          padding: 8px 12px;
+          background: rgba(26, 54, 93, 0.92);
+          color: white;
+          border-radius: 8px;
+          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+          z-index: 120;
+          cursor: pointer;
+          max-width: 280px;
+          font-size: 12.5px;
+        }
+
+        .main-content {
+          padding: 20px;
+          max-width: 1000px;
+          margin: 0 auto;
+        }
+
+        .menu-view {
+          text-align: center;
+        }
+
+        .page-title {
+          color: white;
+          font-size: 1.75rem;
+          font-weight: 700;
+          margin: 0 0 8px;
+        }
+
+        .page-subtitle {
+          color: rgba(255, 255, 255, 0.7);
+          font-size: 0.95rem;
+          margin: 0 0 32px;
+        }
+
+        .section-view {
+          animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title {
+          color: white;
+          font-size: 1.5rem;
+          font-weight: 700;
+          margin: 0 0 8px;
+        }
+
+        .section-subtitle {
+          color: rgba(255, 255, 255, 0.7);
+          font-size: 0.9rem;
+          margin: 0 0 20px;
+        }
+
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+
+        .form-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+
+        .features-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+          gap: 16px;
+          margin-top: 20px;
+        }
+
+        .feature-card {
+          background: white;
+          border-radius: 16px;
+          padding: 24px;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .feature-card:hover {
+          transform: translateY(-6px);
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+        }
+
+        .feature-icon {
+          font-size: 3rem;
+          margin-bottom: 12px;
+        }
+
+        .feature-title {
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: #1e293b;
+          margin-bottom: 6px;
+        }
+
+        .feature-desc {
+          font-size: 0.9rem;
+          color: #64748b;
+        }
+
+        .card {
+          background: white;
+          border-radius: 16px;
+          padding: 24px;
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .form-group {
+          margin-bottom: 16px;
+        }
+
+        .form-label {
+          display: block;
+          font-size: 13px;
+          font-weight: 600;
+          color: #475569;
+          margin-bottom: 6px;
+        }
+
+        .input {
+          width: 100%;
+          padding: 12px 14px;
+          border-radius: 10px;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
+          font-size: 15px;
+          transition: all 0.15s ease;
+        }
+
+        .input:focus {
+          outline: none;
+          border-color: #3b82f6;
+          background: white;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .btn-primary {
+          width: 100%;
+          padding: 14px 20px;
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
+          color: white;
+          border: none;
+          border-radius: 10px;
+          cursor: pointer;
+          font-weight: 600;
+          font-size: 15px;
+          transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-primary:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+
+        .btn-create {
+          padding: 10px 18px;
+          background: linear-gradient(135deg, #22c55e, #16a34a);
+          border: none;
+          border-radius: 12px;
+          color: white;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        .btn-secondary {
+          padding: 12px 20px;
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 12px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+
+        .modal-content {
+          background: white;
+          border-radius: 16px;
+          padding: 24px;
+          max-width: 500px;
+          width: 90%;
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+          margin: 0;
+          font-size: 1.2rem;
+          color: #1e293b;
+        }
+
+        .close-btn {
+          background: none;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          color: #64748b;
+        }
+
+        .modal-actions {
+          display: flex;
+          gap: 12px;
+          margin-top: 20px;
+        }
+
+        .users-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .user-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px;
+          background: #f8fafc;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .user-avatar-sm {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: 700;
+        }
+
+        .user-details {
+          flex: 1;
+        }
+
+        .user-name {
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .user-meta {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .status-badge {
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .status-badge.active {
+          background: #dcfce7;
+          color: #166534;
+        }
+
+        .status-badge.inactive {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+
+        .action-btns {
+          display: flex;
+          gap: 8px;
+        }
+
+        .btn-small {
+          padding: 6px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          background: #f8fafc;
+          color: #1e293b;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .btn-small.danger {
+          background: #fee2e2;
+          color: #991b1b;
+          border-color: #fecaca;
+        }
+
+        .empty-state {
+          text-align: center;
+          padding: 40px;
+          color: #64748b;
+        }
+
+        .checks-list, .logs-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .check-item, .log-item {
+          padding: 12px;
+          background: #f8fafc;
+          border-radius: 10px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .check-type {
+          font-weight: 700;
+          color: #1e293b;
+          margin-bottom: 6px;
+        }
+
+        .check-details {
+          font-size: 14px;
+          color: #64748b;
+        }
+
+        .log-action {
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .log-meta {
+          font-size: 12px;
+          color: #64748b;
+          margin-top: 4px;
+        }
+
+        .shifts-list, .patterns-list, .vacations-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .shift-item, .pattern-item, .vacation-item {
+          padding: 12px;
+          background: #f8fafc;
+          border-radius: 10px;
+          border: 1px solid #e2e8f0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .shift-type {
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+        .shift-user {
+          font-size: 14px;
+          color: #64748b;
+        }
+
+        .vacation-details {
+          flex: 1;
+        }
+
+        .vacation-user {
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+        .vacation-dates {
+          font-size: 13px;
+          color: #64748b;
+          margin-top: 4px;
+        }
+
+        .vacation-status {
+          display: inline-block;
+          padding: 4px 10px;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 600;
+          margin-top: 6px;
+        }
+
+        .vacation-status.pending {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .vacation-status.approved {
+          background: #dcfce7;
+          color: #166534;
+        }
+      `}</style>
+      </div>
+    </SidebarLayout>
+  );
+}

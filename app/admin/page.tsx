@@ -253,11 +253,31 @@ export default function AdminPage() {
       router.push("/change-password");
       return;
     }
-    if (parsed.role !== "ADMIN") {
-      router.push("/");
+    
+    // Allow ADMIN role OR users with scheduling privileges
+    if (parsed.role === "ADMIN" || parsed.role === "SUPER_ADMIN") {
+      setUser(parsed);
+    } else {
+      // Check if user has scheduling privileges
+      fetch(`/api/auth/my-privileges?userId=${parsed.id}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.ok && data.privilege) {
+            const userPriv = data.privilege;
+            if (userPriv.canManageSchedules || userPriv.canManagePatterns || userPriv.canManageSettings) {
+              setUser(parsed);
+            } else {
+              router.push("/");
+            }
+          } else {
+            router.push("/");
+          }
+        })
+        .catch(() => {
+          router.push("/");
+        });
       return;
     }
-    setUser(parsed);
     
     // Check biometric support
     if (window.PublicKeyCredential) {
@@ -315,9 +335,10 @@ export default function AdminPage() {
     setMessage("🔓 Biometric login disabled.");
   };
 
-  const loadAll = async () => {
+  const loadAll = async (adminId?: string) => {
+    const userId = adminId || user?.id;
     const [userRes, dayRes, fullRes, lockRes, settingRes, vacationRes] = await Promise.all([
-      fetch("/api/users/list").then((r) => r.json()),
+      fetch(`/api/users/list${userId ? `?requesterId=${userId}` : ""}`).then((r) => r.json()),
       fetch("/api/patterns/dayoff").then((r) => r.json()),
       fetch("/api/patterns/fulltime").then((r) => r.json()),
       fetch("/api/patterns/locked").then((r) => r.json()),
@@ -333,11 +354,13 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    loadAll();
-    // Initial fetch will check for last schedule if current date has no schedule
-    fetchSchedule();
+    if (user?.id) {
+      loadAll(user.id);
+      // Initial fetch will check for last schedule if current date has no schedule
+      fetchSchedule();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const tick = () => {
@@ -567,7 +590,7 @@ export default function AdminPage() {
   const createUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const payload = Object.fromEntries(form.entries());
+    const payload = { ...Object.fromEntries(form.entries()), requesterId: user?.id };
     const res = await fetch("/api/users/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -587,7 +610,7 @@ export default function AdminPage() {
     const res = await fetch("/api/users/update", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, requesterId: user?.id }),
     });
     const data = await res.json();
     if (!silent) setMessage(data.ok ? "✅ Updated!" : "❌ " + (data.error || "Failed"));
@@ -605,7 +628,7 @@ export default function AdminPage() {
         fetch("/api/users/update", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ ...payload, requesterId: user?.id }),
         }).then((r) => r.json())
       )
     );
@@ -618,7 +641,7 @@ export default function AdminPage() {
     const res = await fetch("/api/users/delete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, requesterId: user?.id }),
     });
     const data = await res.json();
     setMessage(data.ok ? "🗑️ User deleted." : "❌ " + (data.error || "Failed"));
@@ -781,7 +804,7 @@ export default function AdminPage() {
           <button className="close-menu-btn" onClick={closeMobileMenu} aria-label="Close menu">✕</button>
         </div>
         <div className="sidebar-brand desktop-only">
-          <span className="brand-icon">🛫</span>
+          <span className="brand-icon">🇸🇴</span>
           <span className="brand-text">Immigration</span>
         </div>
         <nav className="sidebar-nav">

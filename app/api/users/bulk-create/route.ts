@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { normalizePhone } from "@/lib/phone";
+import { ensureRolePolicies, logAudit } from "@/lib/audit";
 
 type Item = {
   fullName?: string;
@@ -12,11 +13,21 @@ type Item = {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const requesterId = String(body?.requesterId ?? "").trim();
+    if (!requesterId) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
+    }
+    const requester = await prisma.user.findUnique({ where: { id: requesterId } });
+    if (!requester || requester.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
+    }
+
     const items = Array.isArray(body?.items) ? (body.items as Item[]) : [];
     if (!items.length) {
       return NextResponse.json({ ok: false, error: "Items required" }, { status: 400 });
     }
 
+    await ensureRolePolicies();
     const data = [];
     const invalid: Item[] = [];
 
@@ -27,6 +38,11 @@ export async function POST(req: Request) {
         continue;
       }
       const role: "ADMIN" | "OFFICER" = raw.role === "ADMIN" ? "ADMIN" : "OFFICER";
+      const policy = await prisma.roleCreationPolicy.findUnique({ where: { role } });
+      if (!policy?.isAllowed) {
+        invalid.push(raw);
+        continue;
+      }
       const defaultPassword = role === "ADMIN" ? "admin123" : "officer123";
       const fullName = String(raw.fullName ?? "").trim() || phone;
       data.push({
@@ -54,6 +70,12 @@ export async function POST(req: Request) {
       ok: true,
       created,
       invalid: invalid.length,
+    });
+
+    await logAudit({
+      actorId: requester!.id,
+      action: "user.bulk_create",
+      metadata: { created, invalid: invalid.length },
     });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message ?? "Error" }, { status: 500 });

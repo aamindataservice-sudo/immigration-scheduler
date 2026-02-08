@@ -52,10 +52,16 @@ export function formatMogadishuISODate(date: Date) {
 }
 
 export function getMogadishuTomorrowISO() {
-  const parts = getMogadishuNowParts();
-  const today = new Date(parts.isoLocal);
-  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-  return formatMogadishuISODate(tomorrow);
+  try {
+    const parts = getMogadishuNowParts();
+    const today = new Date(parts.isoLocal);
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    return formatMogadishuISODate(tomorrow);
+  } catch {
+    const fallback = new Date();
+    fallback.setDate(fallback.getDate() + 1);
+    return fallback.toISOString().slice(0, 10);
+  }
 }
 
 export function getNextAutoScheduleCountdown(autoTime24: string) {

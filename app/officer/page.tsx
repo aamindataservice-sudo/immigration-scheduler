@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMogadishuTomorrowISO } from "@/lib/time";
 
+export const dynamic = "force-dynamic";
+export const prerender = false;
+
 type Shift = { id: string; date: string; type: string };
 
 function getMogadishuTimeString() {

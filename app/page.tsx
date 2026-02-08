@@ -59,7 +59,16 @@ export default function Home() {
         setBiometricState("success");
         localStorage.setItem("currentUser", JSON.stringify(data.user));
         setTimeout(() => {
-          router.push(data.user.role === "ADMIN" ? "/admin" : "/officer");
+          if (data.user.role === "SUPER_ADMIN") {
+            router.push("/super-admin");
+          } else if (data.user.role === "ADMIN") {
+            router.push("/admin");
+          } else if (data.user.role === "OFFICER") {
+            router.push("/officer");
+          } else {
+            // For CHECKER or custom roles, route based on privileges
+            router.push("/dashboard");
+          }
         }, 500);
         return true;
       }
@@ -85,15 +94,25 @@ export default function Home() {
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
     // Check for logged in user
-    const raw = localStorage.getItem("currentUser");
-    if (raw) {
-      const user = JSON.parse(raw);
-      if (user.mustChangePassword) {
-        router.push("/change-password");
-      } else {
-        router.push(user.role === "ADMIN" ? "/admin" : "/officer");
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("currentUser") : null;
+      if (raw) {
+        const user = JSON.parse(raw);
+        if (user?.mustChangePassword) {
+          router.push("/change-password");
+        } else if (user?.role === "SUPER_ADMIN") {
+          router.push("/super-admin");
+        } else if (user?.role === "ADMIN") {
+          router.push("/admin");
+        } else if (user?.role === "OFFICER") {
+          router.push("/officer");
+        } else {
+          router.push("/workspace");
+        }
+        return;
       }
-      return;
+    } catch {
+      // Invalid or missing user data
     }
 
     // Check admin existence
@@ -192,7 +211,15 @@ export default function Home() {
         }
         setBiometricState("success");
         localStorage.setItem("currentUser", JSON.stringify(data.user));
-        router.push(data.user.role === "ADMIN" ? "/admin" : "/officer");
+        if (data.user.role === "SUPER_ADMIN") {
+          router.push("/super-admin");
+        } else if (data.user.role === "ADMIN") {
+          router.push("/admin");
+        } else if (data.user.role === "OFFICER") {
+          router.push("/officer");
+        } else {
+          router.push("/workspace");
+        }
       }
     } catch { 
       setError("Biometric verification cancelled"); 
@@ -232,7 +259,15 @@ export default function Home() {
       if (data.user.mustChangePassword) {
         router.push("/change-password");
       } else {
-        router.push(data.user.role === "ADMIN" ? "/admin" : "/officer");
+        if (data.user.role === "SUPER_ADMIN") {
+          router.push("/super-admin");
+        } else if (data.user.role === "ADMIN") {
+          router.push("/admin");
+        } else if (data.user.role === "OFFICER") {
+          router.push("/officer");
+        } else {
+          router.push("/workspace");
+        }
       }
     } catch (err: any) {
       setError(err?.message ?? "Login failed");
