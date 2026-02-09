@@ -52,6 +52,7 @@ export async function ensureUserPrivileges(userId: string, role: string) {
   const defaultsForRole = {
     canCheckPayment: role === "SUPER_ADMIN" || role === "CHECKER",
     canCheckEVisa: role === "SUPER_ADMIN" || role === "CHECKER",
+    canScanMe: true,
     canDownloadReceipt: role === "SUPER_ADMIN" || role === "CHECKER",
     canViewPaymentHistory: role === "SUPER_ADMIN",
     canCreateUser: role === "SUPER_ADMIN",

@@ -191,6 +191,7 @@ model UserPrivilege {
   userId                String   @unique
   canCheckPayment       Boolean  @default(false)
   canCheckEVisa         Boolean  @default(false)
+  canScanMe             Boolean  @default(true)
   canDownloadReceipt    Boolean  @default(false)
   canViewPaymentHistory Boolean  @default(false)
   canCreateUser         Boolean  @default(false)

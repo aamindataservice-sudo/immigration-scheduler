@@ -22,7 +22,7 @@ type EVisaResult = {
   message: string;
 };
 
-type CheckerUIProps = { user: { id: string; fullName?: string } };
+type CheckerUIProps = { user: { id: string; fullName?: string }; initialView?: View; hideBackToMenu?: boolean };
 
 const ALLOWED_QR_DOMAIN = "https://immigration.etas.gov.so";
 const VALID_REF_PREFIX = "17";
@@ -81,7 +81,7 @@ function extractReferenceFromQrContent(text: string): string | null {
   }
 }
 
-export default function CheckerUI({ user }: CheckerUIProps) {
+export default function CheckerUI({ user, initialView, hideBackToMenu = false }: CheckerUIProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingReceiptWindowRef = useRef<Window | null>(null);
@@ -89,7 +89,7 @@ export default function CheckerUI({ user }: CheckerUIProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanAnimationRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [currentView, setCurrentView] = useState<View>("menu");
+  const [currentView, setCurrentView] = useState<View>(initialView ?? "menu");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [scanError, setScanError] = useState("");
@@ -533,10 +533,12 @@ export default function CheckerUI({ user }: CheckerUIProps) {
         {currentView === "payment" && (
           <section className="checker-view checker-view-enter">
             <div className="checker-view-header">
+              {!hideBackToMenu && (
               <button type="button" className="checker-back" onClick={() => { setCurrentView("menu"); setMessage(""); setPaymentResult(null); }} aria-label="Back">
                 <span className="checker-back-arrow" aria-hidden>←</span>
                 Back
               </button>
+              )}
               <div className="checker-view-heading">
                 <h2 className="checker-view-title">Payment receipt</h2>
                 <p className="checker-view-sub">Open your official payment receipt</p>
@@ -600,10 +602,12 @@ export default function CheckerUI({ user }: CheckerUIProps) {
         {currentView === "evisa" && (
           <section className="checker-view checker-view-enter">
             <div className="checker-view-header">
+              {!hideBackToMenu && (
               <button type="button" className="checker-back" onClick={() => { setCurrentView("menu"); setMessage(""); setEvisaResult(null); }} aria-label="Back">
                 <span className="checker-back-arrow" aria-hidden>←</span>
                 Back
               </button>
+              )}
               <div className="checker-view-heading">
                 <h2 className="checker-view-title">E-Visa download</h2>
                 <p className="checker-view-sub">Check if your visa is ready and download</p>
@@ -686,6 +690,7 @@ export default function CheckerUI({ user }: CheckerUIProps) {
         {currentView === "scan" && (
           <section className="checker-view checker-scan-view checker-view-enter">
             <div className="checker-view-header">
+              {!hideBackToMenu && (
               <button
                 type="button"
                 className="checker-back"
@@ -707,6 +712,7 @@ export default function CheckerUI({ user }: CheckerUIProps) {
                 <span className="checker-back-arrow" aria-hidden>←</span>
                 Back
               </button>
+              )}
               <div className="checker-view-heading">
                 <h2 className="checker-view-title">Scan QR code</h2>
                 <p className="checker-view-sub">Point camera at QR code — auto-detect. Only QR codes from https://immigration.etas.gov.so</p>

@@ -404,6 +404,7 @@ export default function SuperAdminPage() {
       checker: {
         canCheckPayment: true,
         canCheckEVisa: true,
+        canScanMe: true,
         canDownloadReceipt: true,
         canViewPaymentHistory: false,
         canCreateUser: false,
@@ -423,6 +424,7 @@ export default function SuperAdminPage() {
       adminHelper: {
         canCheckPayment: true,
         canCheckEVisa: true,
+        canScanMe: true,
         canDownloadReceipt: true,
         canViewPaymentHistory: true,
         canCreateUser: true,
@@ -937,6 +939,97 @@ export default function SuperAdminPage() {
                 <button className="btn-secondary" onClick={loadPrivileges}>🔄 Refresh</button>
               </div>
             </div>
+
+            {/* Officer dashboard permissions: Check Visa, Payment, Scan Me */}
+            <div className="card" style={{ marginBottom: 24 }}>
+              <h3 style={{ margin: "0 0 12px", fontSize: "1rem" }}>Officer dashboard permissions</h3>
+              <p className="muted" style={{ marginBottom: 16, fontSize: 13 }}>Control which features appear on each officer&apos;s dashboard.</p>
+              <div className="officer-priv-table-wrap">
+                <table className="officer-priv-table">
+                  <thead>
+                    <tr>
+                      <th>Officer</th>
+                      <th><label className="officer-priv-check-label"><span>Check Visa</span></label></th>
+                      <th><label className="officer-priv-check-label"><span>Payment</span></label></th>
+                      <th><label className="officer-priv-check-label"><span>Scan Me</span></label></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.filter((u) => u.role === "OFFICER").map((officer) => {
+                      const priv = privileges[officer.id] || {};
+                      const toggleOfficerPriv = async (key: string, current: boolean) => {
+                        setLoading(true);
+                        try {
+                          const res = await fetch("/api/admin/privileges", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              requesterId: user?.id,
+                              userId: officer.id,
+                              privileges: { [key]: !current },
+                            }),
+                          });
+                          const data = await res.json();
+                          if (data.ok) {
+                            setPrivileges((prev) => ({
+                              ...prev,
+                              [officer.id]: { ...(prev[officer.id] || {}), ...data.privilege },
+                            }));
+                            setMessage("✅ Updated");
+                          } else setMessage("❌ " + (data.error || "Failed"));
+                        } catch (err: any) {
+                          setMessage("❌ " + (err?.message || "Failed"));
+                        } finally {
+                          setLoading(false);
+                        }
+                      };
+                      return (
+                        <tr key={officer.id}>
+                          <td className="officer-name-cell">{officer.fullName}</td>
+                          <td>
+                            <label className="officer-priv-check-label">
+                              <input
+                                type="checkbox"
+                                checked={!!priv.canCheckEVisa}
+                                onChange={() => toggleOfficerPriv("canCheckEVisa", !!priv.canCheckEVisa)}
+                                disabled={loading}
+                              />
+                              <span className="check-visa">Check Visa</span>
+                            </label>
+                          </td>
+                          <td>
+                            <label className="officer-priv-check-label">
+                              <input
+                                type="checkbox"
+                                checked={!!priv.canCheckPayment}
+                                onChange={() => toggleOfficerPriv("canCheckPayment", !!priv.canCheckPayment)}
+                                disabled={loading}
+                              />
+                              <span className="check-payment">Payment</span>
+                            </label>
+                          </td>
+                          <td>
+                            <label className="officer-priv-check-label">
+                              <input
+                                type="checkbox"
+                                checked={!!(priv.canScanMe !== false)}
+                                onChange={() => toggleOfficerPriv("canScanMe", !!(priv.canScanMe !== false))}
+                                disabled={loading}
+                              />
+                              <span className="scan-me">Scan Me</span>
+                            </label>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {users.filter((u) => u.role === "OFFICER").length === 0 && (
+                <p className="muted" style={{ margin: 12, fontSize: 13 }}>No officers yet. Create users with role OFFICER.</p>
+              )}
+            </div>
+
             <div className="card">
               <div className="form-row">
                 <div className="form-group">
@@ -980,6 +1073,7 @@ export default function SuperAdminPage() {
                       items: [
                         { key: "canCheckPayment", label: "Check Payment" },
                         { key: "canCheckEVisa", label: "Check E-Visa" },
+                        { key: "canScanMe", label: "Scan Me" },
                         { key: "canDownloadReceipt", label: "Download Receipt" },
                         { key: "canViewPaymentHistory", label: "View Payment History" },
                       ],
@@ -1894,6 +1988,43 @@ export default function SuperAdminPage() {
           background: rgba(255, 255, 255, 0.04);
           color: white;
           font-weight: 600;
+        }
+
+        .officer-priv-table-wrap {
+          overflow-x: auto;
+        }
+        .officer-priv-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 14px;
+        }
+        .officer-priv-table th,
+        .officer-priv-table td {
+          padding: 12px 16px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          text-align: left;
+        }
+        .officer-priv-table th {
+          color: #94a3b8;
+          font-weight: 600;
+          font-size: 12px;
+          text-transform: uppercase;
+        }
+        .officer-name-cell {
+          color: #e2e8f0;
+          font-weight: 500;
+        }
+        .officer-priv-check-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          color: #cbd5e1;
+        }
+        .officer-priv-check-label input {
+          width: 18px;
+          height: 18px;
+          accent-color: #22c55e;
         }
 
         .priv-group {
