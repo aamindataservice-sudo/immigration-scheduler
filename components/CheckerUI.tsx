@@ -25,12 +25,39 @@ type EVisaResult = {
 type CheckerUIProps = { user: { id: string; fullName?: string } };
 
 const ALLOWED_QR_DOMAIN = "https://immigration.etas.gov.so";
+const VALID_REF_PREFIX = "17";
+
+/** Somali: wrong website warning */
+const SOMALI_WRONG_WEBSITE = "QR-ku wuxuu tusayaa websaydh kale (ma aha kan immigrationka). Halkan ka eeg link-ka:";
+/** Somali: wrong reference (must start with 17) */
+const SOMALI_WRONG_REF = "Lambarka referens-ka ma saxna fadlan iska hubi. Halkan ka eeg lambarka:";
 
 /** Only accept QR content when the link includes the allowed immigration e-Visa domain. */
 function isAllowedQrLink(text: string): boolean {
   if (!text || typeof text !== "string") return false;
   const lower = text.trim().toLowerCase();
   return lower.includes(ALLOWED_QR_DOMAIN) || lower.includes("immigration.etas.gov.so");
+}
+
+/** After reading QR content: return { url, wrongPart } when link is not our allowed domain (so we always show what we read). */
+function getWrongDomainInfo(text: string): { url: string; wrongPart: string } {
+  const u = (text || "").trim() || "(empty)";
+  try {
+    const url = new URL(u.startsWith("http") ? u : `https://${u}`);
+    const host = url.hostname.toLowerCase();
+    const isOurs = host === "immigration.etas.gov.so" || url.href.toLowerCase().includes("immigration.etas.gov.so");
+    if (isOurs) return { url: url.href, wrongPart: "" };
+    return { url: url.href, wrongPart: host };
+  } catch {
+    return { url: u, wrongPart: u };
+  }
+}
+
+/** True if a 10-digit reference is valid (must start with 17). */
+function isRefValid(ref: string): boolean {
+  if (!ref || ref.length < 10) return false;
+  const ten = ref.length > 10 ? ref.slice(-10) : ref;
+  return ten.startsWith(VALID_REF_PREFIX);
 }
 
 /** Extract 10 digits (reference/serial) from QR content: verifyEvisa URL (?vpnf=...), etas.gov.so link, or any string with digits */
@@ -68,6 +95,7 @@ export default function CheckerUI({ user }: CheckerUIProps) {
   const [scanError, setScanError] = useState("");
   const [cameraError, setCameraError] = useState("");
   const [scanFeedback, setScanFeedback] = useState("");
+  const [scanWarning, setScanWarning] = useState<{ type: "wrong_domain"; url: string; wrongPart: string } | { type: "wrong_ref"; ref: string } | null>(null);
 
   const [serialNumber, setSerialNumber] = useState("");
   const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
@@ -127,13 +155,31 @@ export default function CheckerUI({ user }: CheckerUIProps) {
         if (!code?.data) code = jsQR(imageData.data, w, h, { inversionAttempts: "invertFirst" });
         if (!code?.data) code = jsQR(imageData.data, w, h);
         if (code?.data) {
-          if (!isAllowedQrLink(code.data)) {
-            setScanFeedback(`Use a QR from ${ALLOWED_QR_DOMAIN}`);
+          const readLink = code.data;
+          if (!isAllowedQrLink(readLink)) {
+            const wrongInfo = getWrongDomainInfo(readLink);
+            if (mounted) {
+              setScanWarning({
+                type: "wrong_domain",
+                url: wrongInfo.url,
+                wrongPart: wrongInfo.wrongPart || wrongInfo.url,
+              });
+              setScanFeedback(SOMALI_WRONG_WEBSITE);
+            }
             return;
           }
+          setScanWarning(null);
           stopCamera();
-          const reference = extractReferenceFromQrContent(code.data);
+          const reference = extractReferenceFromQrContent(readLink);
           if (reference) {
+            if (!isRefValid(reference)) {
+              if (mounted) {
+                setScanWarning({ type: "wrong_ref", ref: reference });
+                setScanFeedback(SOMALI_WRONG_REF);
+              }
+              return;
+            }
+            setScanWarning(null);
             if (mounted) setScanFeedback("Valid QR! Opening receipt…");
             const receiptUrl = `${receiptBaseUrl}${encodeURIComponent(reference)}`;
             const win = window.open("", "_blank");
@@ -151,6 +197,7 @@ export default function CheckerUI({ user }: CheckerUIProps) {
           }
           setScanFeedback("QR detected — hold steady (use receipt/e-Visa QR)");
         } else {
+          setScanWarning(null);
           setScanFeedback("Point at a receipt or e-Visa QR code");
         }
       } catch (_) {
@@ -191,6 +238,7 @@ export default function CheckerUI({ user }: CheckerUIProps) {
         video.srcObject = null;
       }
       setScanFeedback("");
+      setScanWarning(null);
     };
   }, [currentView]);
 
@@ -345,7 +393,13 @@ export default function CheckerUI({ user }: CheckerUIProps) {
         return;
       }
       if (!isAllowedQrLink(code.data)) {
-        setScanError(`Use a QR from ${ALLOWED_QR_DOMAIN} only.`);
+        const wrongInfo = getWrongDomainInfo(code.data);
+        setScanWarning({
+          type: "wrong_domain",
+          url: wrongInfo.url,
+          wrongPart: wrongInfo.wrongPart || wrongInfo.url,
+        });
+        setScanError("");
         if (pendingReceiptWindowRef.current) {
           try {
             pendingReceiptWindowRef.current.close();
@@ -356,6 +410,7 @@ export default function CheckerUI({ user }: CheckerUIProps) {
       }
       const reference = extractReferenceFromQrContent(code.data);
       if (!reference) {
+        setScanWarning(null);
         setScanError("QR content not recognized.");
         if (pendingReceiptWindowRef.current) {
           try {
@@ -365,6 +420,18 @@ export default function CheckerUI({ user }: CheckerUIProps) {
         }
         return;
       }
+      if (!isRefValid(reference)) {
+        setScanWarning({ type: "wrong_ref", ref: reference });
+        setScanError("");
+        if (pendingReceiptWindowRef.current) {
+          try {
+            pendingReceiptWindowRef.current.close();
+          } catch (_) {}
+          pendingReceiptWindowRef.current = null;
+        }
+        return;
+      }
+      setScanWarning(null);
       if (pendingReceiptWindowRef.current) {
         try {
           pendingReceiptWindowRef.current.location.href = `${receiptBaseUrl}${encodeURIComponent(reference)}`;
@@ -633,6 +700,8 @@ export default function CheckerUI({ user }: CheckerUIProps) {
                   }
                   setCurrentView("menu");
                   setCameraError("");
+                  setScanWarning(null);
+                  setScanError("");
                 }}
               >
                 <span className="checker-back-arrow" aria-hidden>←</span>
@@ -657,6 +726,51 @@ export default function CheckerUI({ user }: CheckerUIProps) {
                 <p className="checker-scan-hint">{scanFeedback || "Point at a receipt or e-Visa QR code"}</p>
               </div>
             </div>
+            {scanWarning?.type === "wrong_domain" && (
+              <div className="checker-fake-alert-overlay" role="alertdialog" aria-modal="true" aria-labelledby="checker-fake-alert-title">
+                <div className="checker-fake-alert-popup">
+                  <div className="checker-fake-alert-icon">⚠️</div>
+                  <h2 id="checker-fake-alert-title" className="checker-fake-alert-title">Fake visa detection</h2>
+                  <p className="checker-fake-alert-subtitle">Wrong website — not official immigration e-Visa</p>
+                  <p className="checker-fake-alert-msg">{SOMALI_WRONG_WEBSITE}</p>
+                  <p className="checker-qr-label">Link read from QR:</p>
+                  <p className="checker-qr-url">
+                    {scanWarning.wrongPart && scanWarning.url.indexOf(scanWarning.wrongPart) >= 0 ? (
+                      <>
+                        {scanWarning.url.slice(0, scanWarning.url.indexOf(scanWarning.wrongPart))}
+                        <span className="checker-qr-wrong-part">{scanWarning.wrongPart}</span>
+                        {scanWarning.url.slice(scanWarning.url.indexOf(scanWarning.wrongPart) + scanWarning.wrongPart.length)}
+                      </>
+                    ) : (
+                      scanWarning.url
+                    )}
+                  </p>
+                  <button
+                    type="button"
+                    className="checker-fake-alert-btn"
+                    onClick={() => setScanWarning(null)}
+                    autoFocus
+                  >
+                    OK
+                  </button>
+                </div>
+              </div>
+            )}
+            {scanWarning?.type === "wrong_ref" && (
+              <div className="checker-scan-warning" role="alert">
+                <p className="checker-scan-warning-msg">{SOMALI_WRONG_REF}</p>
+                <p className="checker-qr-label">Reference read from QR:</p>
+                <p className="checker-qr-ref">
+                  <span className="checker-qr-wrong-part">{scanWarning.ref}</span>
+                </p>
+              </div>
+            )}
+            {scanError && !scanWarning && (
+              <div className="checker-alert error" style={{ marginTop: 12 }}>
+                <span>⚠️</span>
+                <span>{scanError}</span>
+              </div>
+            )}
             {cameraError && (
               <div className="checker-alert error" style={{ marginTop: 12 }}>
                 <span>⚠️</span>
@@ -1160,6 +1274,116 @@ export default function CheckerUI({ user }: CheckerUIProps) {
           font-size: clamp(0.85rem, 2.5vw, 0.95rem);
           text-align: center;
           text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        }
+        .checker-scan-warning {
+          margin-top: 12px;
+          padding: 14px 16px;
+          background: #fef3c7;
+          border: 1px solid #f59e0b;
+          border-radius: 12px;
+          text-align: left;
+        }
+        .checker-scan-warning-msg {
+          margin: 0 0 8px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: #92400e;
+        }
+        .checker-qr-label {
+          margin: 0 0 4px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #78350f;
+          text-transform: uppercase;
+          letter-spacing: 0.02em;
+        }
+        .checker-qr-url, .checker-qr-ref {
+          margin: 0;
+          font-size: 0.8rem;
+          word-break: break-all;
+          color: #1e293b;
+        }
+        .checker-qr-wrong-part {
+          background: #fecaca;
+          color: #b91c1c;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-weight: 700;
+        }
+        .checker-fake-alert-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          background: rgba(0, 0, 0, 0.6);
+          animation: checkerFakeAlertFadeIn 0.2s ease-out;
+        }
+        @keyframes checkerFakeAlertFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .checker-fake-alert-popup {
+          background: #fff;
+          border-radius: 20px;
+          padding: 24px;
+          max-width: 400px;
+          width: 100%;
+          box-shadow: 0 24px 48px rgba(0, 0, 0, 0.3);
+          border: 3px solid #dc2626;
+          animation: checkerFakeAlertPop 0.25s ease-out;
+        }
+        @keyframes checkerFakeAlertPop {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .checker-fake-alert-icon {
+          font-size: 3rem;
+          text-align: center;
+          margin-bottom: 8px;
+        }
+        .checker-fake-alert-title {
+          margin: 0 0 4px;
+          font-size: 1.35rem;
+          font-weight: 800;
+          color: #b91c1c;
+          text-align: center;
+        }
+        .checker-fake-alert-subtitle {
+          margin: 0 0 16px;
+          font-size: 0.9rem;
+          color: #64748b;
+          text-align: center;
+        }
+        .checker-fake-alert-msg {
+          margin: 0 0 12px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: #92400e;
+        }
+        .checker-fake-alert-popup .checker-qr-label {
+          margin: 0 0 4px;
+        }
+        .checker-fake-alert-popup .checker-qr-url {
+          margin: 0 0 20px;
+        }
+        .checker-fake-alert-btn {
+          display: block;
+          width: 100%;
+          padding: 14px 20px;
+          background: #dc2626;
+          color: #fff;
+          border: none;
+          border-radius: 12px;
+          font-size: 1rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .checker-fake-alert-btn:hover {
+          background: #b91c1c;
         }
         @media (max-width: 380px) {
           .checker-page {
