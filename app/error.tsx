@@ -65,6 +65,27 @@ export default function Error({
         >
           Go to login
         </button>
+        {error?.message?.includes("Failed to load chunk") && (
+          <>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              style={{
+                padding: "12px 24px",
+                borderRadius: 10,
+                border: "1px solid rgba(255,255,255,0.5)",
+                background: "rgba(255,255,255,0.1)",
+                color: "#fff",
+                cursor: "pointer",
+              }}
+            >
+              Hard refresh page
+            </button>
+            <p style={{ fontSize: "0.8rem", opacity: 0.9, marginTop: 16, width: "100%" }}>
+              Or use Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac) to bypass cache.
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

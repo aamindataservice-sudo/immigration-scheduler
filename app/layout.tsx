@@ -12,6 +12,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Avoid long HTML cache so deployments don't serve stale chunk refs (fixes 500 on arrival.ssda.so after deploy)
+export const revalidate = 0;
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,

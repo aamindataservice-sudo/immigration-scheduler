@@ -6,7 +6,6 @@ import { getMogadishuTomorrowISO } from "@/lib/time";
 import OfficerScanView from "@/components/OfficerScanView";
 
 export const dynamic = "force-dynamic";
-export const prerender = false;
 
 type Shift = { id: string; date: string; type: string };
 type OfficerTabId = "check-visa" | "check-payment" | "scan-me" | "my-shifts";
@@ -195,6 +194,7 @@ export default function OfficerPage() {
   return (
     <div className="officer-page">
       <div className="officer-bg" aria-hidden />
+
       <header className="officer-header">
         <div className="officer-header-left">
           <div className="officer-avatar">
@@ -548,6 +548,18 @@ export default function OfficerPage() {
         .officer-detail-row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 14px; color: #cbd5e1; }
         .officer-detail-row:last-child { border-bottom: none; }
         .officer-status-active { color: #4ade80; font-weight: 600; }
+
+        .officer-lock-overlay { position: fixed; inset: 0; z-index: 300; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; padding: 20px; animation: officer-fadeIn 0.3s ease-out; }
+        .officer-lock-card { background: rgba(30, 41, 59, 0.98); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 40px 32px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 24px 48px rgba(0,0,0,0.4); animation: officer-scaleIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .officer-lock-icon { font-size: 4rem; margin-bottom: 16px; }
+        .officer-lock-title { margin: 0 0 12px; font-size: 1.5rem; font-weight: 700; color: white; }
+        .officer-lock-text { margin: 0 0 24px; font-size: 15px; color: #94a3b8; line-height: 1.5; }
+        .officer-lock-error { margin: 0 0 16px; font-size: 13px; color: #f87171; }
+        .officer-lock-btn { display: block; width: 100%; padding: 18px 24px; border-radius: 16px; border: none; background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.25s ease; margin-bottom: 12px; }
+        .officer-lock-btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-2px); }
+        .officer-lock-btn:disabled { opacity: 0.8; cursor: not-allowed; }
+        .officer-lock-logout { display: block; width: 100%; padding: 14px; border: none; background: transparent; color: #94a3b8; font-size: 14px; cursor: pointer; text-decoration: underline; }
+        .officer-lock-logout:hover { color: #e2e8f0; }
 
         @media (max-width: 480px) {
           .officer-stats-grid { grid-template-columns: repeat(2, 1fr); }
