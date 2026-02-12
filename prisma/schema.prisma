@@ -46,6 +46,8 @@ model User {
   paymentChecks     PaymentCheck[]
   auditLogs        AuditLog[]
   privilege        UserPrivilege?
+  officerPenalties OfficerPenalty[]  @relation("OfficerPenalties")
+  createdPenalties OfficerPenalty[]  @relation("CreatedPenalties")
 }
 
 model Shift {
@@ -229,4 +231,39 @@ model PaymentCheck {
   
   @@index([checkedBy])
   @@index([createdAt])
+}
+
+model OfficerPenalty {
+  id            String   @id @default(cuid())
+  officerId     String?
+  stampNo       String
+  note          String?
+  color         String?
+  count         Int      @default(0)
+  lastResetDate String?
+  createdBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  officer         User?                 @relation("OfficerPenalties", fields: [officerId], references: [id], onDelete: SetNull)
+  createdByUser   User                  @relation("CreatedPenalties", fields: [createdBy], references: [id], onDelete: Cascade)
+  daySnapshots    PenaltyDaySnapshot[]
+
+  @@index([officerId])
+  @@index([createdBy])
+  @@index([createdAt])
+}
+
+model PenaltyDaySnapshot {
+  id              String   @id @default(cuid())
+  officerPenaltyId String
+  date            String
+  count           Int
+  createdAt       DateTime @default(now())
+
+  officerPenalty  OfficerPenalty @relation(fields: [officerPenaltyId], references: [id], onDelete: Cascade)
+
+  @@unique([officerPenaltyId, date])
+  @@index([officerPenaltyId])
+  @@index([date])
 }

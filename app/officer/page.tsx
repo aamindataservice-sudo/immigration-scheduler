@@ -621,7 +621,7 @@ export default function OfficerPage() {
         .officer-lock-btn:disabled { opacity: 0.8; cursor: not-allowed; }
         .officer-lock-logout { display: block; width: 100%; padding: 14px; border: none; background: transparent; color: #94a3b8; font-size: 14px; cursor: pointer; text-decoration: underline; }
         .officer-lock-logout:hover { color: #e2e8f0; }
-
+        
         @media (max-width: 600px) {
           .officer-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
           .officer-stat-value { font-size: 1.5rem; }
