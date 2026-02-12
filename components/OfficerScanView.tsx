@@ -25,14 +25,18 @@ const scanResultStyles = `
   .officer-scan-fake .officer-scan-result-title { color: #f87171; }
   .officer-scan-result-somali { margin: 0 0 24px; font-size: 1.15rem; line-height: 1.65; color: #e2e8f0; }
   .officer-scan-result-url { margin: 0 0 24px; font-size: 12px; color: #94a3b8; word-break: break-all; }
-  .officer-scan-result-btn { padding: 16px 32px; border-radius: 16px; border: none; background: rgba(255,255,255,0.12); color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: transform 0.2s, background 0.2s; }
+  .officer-scan-result-btn { padding: 16px 32px; border-radius: 16px; border: none; background: rgba(255,255,255,0.12); color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: transform 0.2s, background 0.2s; margin-bottom: 10px; }
   .officer-scan-result-btn:hover { background: rgba(255,255,255,0.2); transform: translateY(-2px); }
   .officer-scan-result-btn:active { transform: translateY(0); }
+  .officer-scan-result-btn-back { background: transparent; border: 1px solid rgba(255,255,255,0.25); margin-bottom: 0; margin-top: 4px; font-size: 14px; }
+  .officer-scan-result-btn-back:hover { background: rgba(255,255,255,0.08); }
 `;
 
 const cameraStyles = `
   @keyframes officer-scan-frame-pulse { 0%, 100% { opacity: 0.7; box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4); } 50% { opacity: 1; box-shadow: 0 0 0 8px rgba(56, 189, 248, 0); } }
   .officer-scan-view { margin: -24px -20px; padding: 24px 20px; }
+  .officer-scan-back-btn { display: block; width: 100%; max-width: 480px; margin: 0 auto 16px; padding: 14px 20px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color: #e2e8f0; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; text-align: left; }
+  .officer-scan-back-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(56,189,248,0.3); }
   .officer-scan-camera-wrap { position: relative; max-width: 480px; margin: 0 auto 20px; border-radius: 22px; overflow: hidden; background: #0f172a; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 12px 32px rgba(0,0,0,0.25); }
   .officer-scan-video { width: 100%; display: block; }
   .officer-scan-canvas { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
@@ -53,6 +57,7 @@ export default function OfficerScanView() {
   const streamRef = useRef<MediaStream | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult>(null);
   const [feedback, setFeedback] = useState("Point camera at QR code");
   const [cameraError, setCameraError] = useState("");
@@ -83,6 +88,21 @@ export default function OfficerScanView() {
   };
 
   const resetScan = () => {
+    setScanResult(null);
+    setWrongDomainUrl("");
+    setFeedback("Point camera at QR code");
+    setCameraError("");
+    // Keep cameraOpen true so useEffect restarts camera and we return to scanner view
+  };
+
+  const openScanner = () => {
+    setCameraError("");
+    setCameraOpen(true);
+  };
+
+  const closeScanner = () => {
+    stopCamera();
+    setCameraOpen(false);
     setScanResult(null);
     setWrongDomainUrl("");
     setFeedback("Point camera at QR code");
@@ -172,12 +192,12 @@ export default function OfficerScanView() {
   };
 
   useEffect(() => {
-    if (scanResult !== null) return;
+    if (!cameraOpen || scanResult !== null) return;
     startCamera();
     return () => {
       stopCamera();
     };
-  }, [scanResult]);
+  }, [cameraOpen, scanResult]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -209,6 +229,32 @@ export default function OfficerScanView() {
     img.src = url;
   };
 
+  // Landing: Etas QR scanner button (before opening camera)
+  if (!cameraOpen) {
+    return (
+      <section className="officer-scan-view officer-scan-landing">
+        <div className="officer-scan-etas-card">
+          <div className="officer-scan-etas-icon">📱</div>
+          <h2 className="officer-scan-etas-title">Etas QR scanner</h2>
+          <p className="officer-scan-etas-desc">Scan e-Visa QR codes to verify validity</p>
+          <button type="button" className="officer-scan-etas-btn" onClick={openScanner}>
+            Tap to open scanner
+          </button>
+        </div>
+        <style jsx>{`
+          .officer-scan-landing { padding: 24px 20px; }
+          .officer-scan-etas-card { max-width: 420px; margin: 0 auto; padding: 40px 28px; text-align: center; background: rgba(255,255,255,0.07); border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 16px 48px rgba(0,0,0,0.2); }
+          .officer-scan-etas-icon { font-size: 4rem; margin-bottom: 16px; line-height: 1; }
+          .officer-scan-etas-title { margin: 0 0 10px; font-size: 1.5rem; font-weight: 700; color: white; letter-spacing: -0.02em; }
+          .officer-scan-etas-desc { margin: 0 0 28px; font-size: 15px; color: #94a3b8; line-height: 1.5; }
+          .officer-scan-etas-btn { display: block; width: 100%; padding: 20px 28px; border-radius: 18px; border: none; background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; font-size: 17px; font-weight: 700; cursor: pointer; transition: all 0.25s ease; box-shadow: 0 8px 24px rgba(14, 165, 233, 0.35); }
+          .officer-scan-etas-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(14, 165, 233, 0.45); }
+          .officer-scan-etas-btn:active { transform: translateY(-1px); }
+        `}</style>
+      </section>
+    );
+  }
+
   if (scanResult === "valid") {
     return (
       <div className="officer-scan-result officer-scan-valid officer-scan-result-in">
@@ -217,6 +263,9 @@ export default function OfficerScanView() {
         <p className="officer-scan-result-somali">{SOMALI_VALID_VISA}</p>
         <button type="button" className="officer-scan-result-btn" onClick={resetScan}>
           Scan again
+        </button>
+        <button type="button" className="officer-scan-result-btn officer-scan-result-btn-back" onClick={closeScanner}>
+          Back to Etas QR scanner
         </button>
         <style jsx>{scanResultStyles}</style>
       </div>
@@ -235,13 +284,20 @@ export default function OfficerScanView() {
         <button type="button" className="officer-scan-result-btn" onClick={resetScan}>
           Scan again
         </button>
+        <button type="button" className="officer-scan-result-btn officer-scan-result-btn-back" onClick={closeScanner}>
+          Back to Etas QR scanner
+        </button>
         <style jsx>{scanResultStyles}</style>
       </div>
     );
   }
 
+  // Camera view (cameraOpen === true, scanResult === null)
   return (
     <section className="officer-scan-view">
+      <button type="button" className="officer-scan-back-btn" onClick={closeScanner} aria-label="Back to Etas QR scanner">
+        ← Etas QR scanner
+      </button>
       <div className="officer-scan-camera-wrap">
         <video ref={videoRef} className="officer-scan-video" playsInline muted autoPlay />
         <canvas ref={canvasRef} className="officer-scan-canvas" aria-hidden />

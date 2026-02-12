@@ -96,12 +96,12 @@ npx prisma db push
 echo "🔨 Building application on server..."
 npm run build
 
-# Restart PM2
+# Restart PM2 (required after every build so chunk URLs match files on disk)
 echo "🔄 Restarting application..."
 if pm2 list | grep -q "immigration-schedule"; then
   pm2 restart immigration-schedule
 else
-  PORT=3003 pm2 start npm --name "immigration-schedule" -- start
+  pm2 start ecosystem.config.cjs
   pm2 save
 fi
 

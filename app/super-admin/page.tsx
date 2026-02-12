@@ -597,53 +597,173 @@ export default function SuperAdminPage() {
       currentTime={currentTime}
     >
       {message && (
-        <div className="toast" onClick={() => setMessage("")}>
+        <div className="toast" onClick={() => setMessage("")} role="alert">
           {message}
         </div>
       )}
 
       <div className="super-admin-content">
-        
         {/* Dashboard */}
         {activeTab === "dashboard" && (
-          <div>
-            <h2 className="section-title" style={{ color: "white" }}>Dashboard</h2>
-            <div className="summary-grid">
-              <div className="summary-card glow">
-                <div className="summary-title">👥 Users</div>
-                <div className="summary-values">
-                  <span>{stats.total} total</span>
-                  <span>{stats.active} active</span>
-                  <span>{stats.inactive} inactive</span>
-                </div>
-                <div className="summary-pills">
-                  <span className="chip">Admins {stats.admins}</span>
-                  <span className="chip">Checkers {stats.checkers}</span>
-                  <span className="chip">Officers {stats.officers}</span>
-                </div>
-              </div>
-              <div className="summary-card glow">
-                <div className="summary-title">💳 Payment Checks</div>
-                <div className="summary-values">
-                  <span>{paymentStats.total} total</span>
-                  <span className="good">{paymentStats.found} found</span>
-                  <span className="warn">{paymentStats.notFound} not found</span>
-                  <span className="error">{paymentStats.error} errors</span>
-                </div>
-              </div>
+          <div className="sa-dashboard">
+            <div className="sa-dashboard-head">
+              <h1 className="sa-page-title">Dashboard</h1>
+              <p className="sa-page-sub">See everything at a glance</p>
+              <button
+                type="button"
+                className="sa-refresh-btn"
+                onClick={() => user?.id && (loadUsers(), loadPaymentChecks(), loadAuditLogs(), loadPrivileges(), loadRolePolicies())}
+              >
+                🔄 Refresh all
+              </button>
             </div>
+
+            <section className="sa-summary-section">
+              <h2 className="sa-summary-heading">Summary</h2>
+              <div className="summary-grid">
+                <div className="summary-card glow" onClick={() => setActiveTab("users-list")}>
+                  <div className="summary-title">👥 Users</div>
+                  <div className="summary-values">
+                    <span>{stats.total} total</span>
+                    <span>{stats.active} active</span>
+                    <span>{stats.inactive} inactive</span>
+                  </div>
+                  <div className="summary-pills">
+                    <span className="chip">Admins {stats.admins}</span>
+                    <span className="chip">Checkers {stats.checkers}</span>
+                    <span className="chip">Officers {stats.officers}</span>
+                  </div>
+                  <span className="summary-link">View users →</span>
+                </div>
+                <div className="summary-card glow" onClick={() => setActiveTab("payment-history")}>
+                  <div className="summary-title">💳 Payment Checks</div>
+                  <div className="summary-values">
+                    <span>{paymentStats.total} total</span>
+                    <span className="good">{paymentStats.found} found</span>
+                    <span className="warn">{paymentStats.notFound} not found</span>
+                    <span className="error">{paymentStats.error} errors</span>
+                  </div>
+                  <span className="summary-link">View history →</span>
+                </div>
+                <div className="summary-card glow summary-card-sm" onClick={() => setActiveTab("audit-logs")}>
+                  <div className="summary-title">📑 Audit Logs</div>
+                  <div className="summary-values">
+                    <span>{auditLogs.length} entries</span>
+                  </div>
+                  <span className="summary-link">View logs →</span>
+                </div>
+              </div>
+            </section>
+
+            <section className="sa-quick-nav">
+              <h2 className="sa-summary-heading">Quick access</h2>
+              <div className="sa-quick-nav-grid">
+                <button type="button" className="sa-quick-card" onClick={() => setActiveTab("users-list")}>
+                  <span className="sa-quick-icon">👥</span>
+                  <span className="sa-quick-label">User Management</span>
+                  <span className="sa-quick-desc">Create, edit, export users</span>
+                </button>
+                <button type="button" className="sa-quick-card" onClick={() => setActiveTab("payment-history")}>
+                  <span className="sa-quick-icon">💳</span>
+                  <span className="sa-quick-label">Payment History</span>
+                  <span className="sa-quick-desc">All payment & e-Visa checks</span>
+                </button>
+                <button type="button" className="sa-quick-card" onClick={() => setActiveTab("privileges")}>
+                  <span className="sa-quick-icon">🔐</span>
+                  <span className="sa-quick-label">Privileges</span>
+                  <span className="sa-quick-desc">Officer permissions</span>
+                </button>
+                <button type="button" className="sa-quick-card" onClick={() => setActiveTab("role-policies")}>
+                  <span className="sa-quick-icon">✅</span>
+                  <span className="sa-quick-label">Role Policies</span>
+                  <span className="sa-quick-desc">What each role can do</span>
+                </button>
+                <button type="button" className="sa-quick-card" onClick={() => setActiveTab("audit-logs")}>
+                  <span className="sa-quick-icon">📑</span>
+                  <span className="sa-quick-label">Audit Logs</span>
+                  <span className="sa-quick-desc">Activity history</span>
+                </button>
+              </div>
+            </section>
+
+            <section className="sa-recent-section">
+              <h2 className="sa-summary-heading">Recent activity</h2>
+              <div className="sa-recent-card">
+                {filteredAuditLogs.length === 0 ? (
+                  <p className="sa-recent-empty">No activity yet</p>
+                ) : (
+                  <ul className="sa-recent-list">
+                    {filteredAuditLogs.slice(0, 10).map((log) => (
+                      <li key={log.id} className="sa-recent-item">
+                        <span className="sa-recent-action">{log.action}</span>
+                        <span className="sa-recent-actor">{log.actor?.fullName || "—"} ({log.actor?.role || "—"})</span>
+                        <span className="sa-recent-time">{new Date(log.createdAt).toLocaleString()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <button type="button" className="sa-recent-more" onClick={() => setActiveTab("audit-logs")}>
+                  View all logs →
+                </button>
+              </div>
+            </section>
+
+            <section className="sa-recent-section">
+              <h2 className="sa-summary-heading">Recent users</h2>
+              <div className="sa-recent-card">
+                {users.length === 0 ? (
+                  <p className="sa-recent-empty">No users yet</p>
+                ) : (
+                  <ul className="sa-recent-list">
+                    {users.slice(0, 8).map((u) => (
+                      <li key={u.id} className="sa-recent-item">
+                        <span className="sa-recent-actor">{u.fullName}</span>
+                        <span className="sa-recent-meta">{u.role} · {u.isActive ? "Active" : "Inactive"}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <button type="button" className="sa-recent-more" onClick={() => setActiveTab("users-list")}>
+                  Manage users →
+                </button>
+              </div>
+            </section>
+
+            <section className="sa-recent-section">
+              <h2 className="sa-summary-heading">Recent payment checks</h2>
+              <div className="sa-recent-card">
+                {paymentChecks.length === 0 ? (
+                  <p className="sa-recent-empty">No checks yet</p>
+                ) : (
+                  <ul className="sa-recent-list">
+                    {paymentChecks.slice(0, 8).map((check) => (
+                      <li key={check.id} className="sa-recent-item">
+                        <span className="sa-recent-action">{check.type === "PAYMENT_RECEIPT" ? "💳 Payment" : "📄 E-Visa"}</span>
+                        <span className={`sa-recent-status sa-recent-status-${check.status.toLowerCase()}`}>
+                          {check.status === "FOUND" ? "Found" : check.status === "ERROR" ? "Error" : "Not found"}
+                        </span>
+                        <span className="sa-recent-meta">by {check.checkedByUser?.fullName || "—"}</span>
+                        <span className="sa-recent-time">{new Date(check.createdAt).toLocaleString()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <button type="button" className="sa-recent-more" onClick={() => setActiveTab("payment-history")}>
+                  View all checks →
+                </button>
+              </div>
+            </section>
           </div>
         )}
 
         {/* Users Tab */}
         {activeTab === "users-list" && (
-          <div>
-            {/* Create User Button */}
+          <div className="sa-section">
             <div className="section-header">
-              <h2>Users</h2>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button className="btn-secondary" onClick={exportUsers}>⬇️ Export CSV</button>
-                <button className="btn-create" onClick={() => setShowCreateChecker(true)}>
+              <h1 className="sa-page-title">Users</h1>
+              <div className="section-actions">
+                <button type="button" className="btn-secondary" onClick={exportUsers}>⬇️ Export CSV</button>
+                <button type="button" className="btn-create" onClick={() => setShowCreateChecker(true)}>
                   ➕ Create User
                 </button>
               </div>
@@ -846,9 +966,9 @@ export default function SuperAdminPage() {
         
         {/* Payment Checks Tab */}
         {activeTab === "payment-history" && (
-          <div>
+          <div className="sa-section">
             <div className="section-header">
-              <h2>All Payment Checks</h2>
+              <h1 className="sa-page-title">Payment Checks</h1>
               <label className="filter-check">
                 <input
                   type="checkbox"
@@ -929,10 +1049,10 @@ export default function SuperAdminPage() {
 
         {/* Privileges Tab */}
         {activeTab === "privileges" && (
-          <div>
+          <div className="sa-section">
             <div className="section-header">
-              <h2>User Privileges</h2>
-              <div style={{ display: "flex", gap: 8 }}>
+              <h1 className="sa-page-title">User Privileges</h1>
+              <div className="section-actions">
                 <button className="btn-secondary" onClick={initPrivilegesForAll}>
                   🔧 Init All Users
                 </button>
@@ -1169,9 +1289,9 @@ export default function SuperAdminPage() {
 
         {/* Role Policies Tab */}
         {activeTab === "role-policies" && (
-          <div>
+          <div className="sa-section">
             <div className="section-header">
-              <h2>Role Creation Policy</h2>
+              <h1 className="sa-page-title">Role Policies</h1>
               <button className="btn-secondary" onClick={loadRolePolicies}>
                 🔄 Refresh
               </button>
@@ -1255,10 +1375,10 @@ export default function SuperAdminPage() {
 
         {/* Reports Tab */}
         {activeTab === "audit-logs" && (
-          <div>
+          <div className="sa-section">
             <div className="section-header">
-              <h2>Activity Logs</h2>
-              <div style={{ display: "flex", gap: 8 }}>
+              <h1 className="sa-page-title">Activity Logs</h1>
+              <div className="section-actions">
                 <button className="btn-secondary" onClick={loadAuditLogs}>
                   🔄 Refresh
                 </button>
@@ -1319,98 +1439,181 @@ export default function SuperAdminPage() {
       <style jsx>{`
         .super-admin-content {
           width: 100%;
+          max-width: 100%;
         }
 
-        .page-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 16px 20px;
-          background: rgba(255, 255, 255, 0.08);
-          backdrop-filter: blur(10px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        .sa-dashboard,
+        .sa-section {
+          animation: saFadeIn 0.3s ease-out;
         }
-        
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 12px;
+        @keyframes saFadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        
-        .user-avatar {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
-          background: linear-gradient(135deg, #f59e0b, #d97706);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
+
+        .sa-page-title {
+          margin: 0 0 6px;
+          font-size: clamp(1.25rem, 4vw, 1.6rem);
           font-weight: 700;
-          font-size: 1.25rem;
-          box-shadow: 0 10px 30px rgba(245, 158, 11, 0.35);
-        }
-        
-        .user-info h1 {
           color: white;
-          font-size: 1.1rem;
-          margin: 0 0 4px;
+          letter-spacing: -0.02em;
         }
-        
-        .role-badge {
-          background: rgba(251, 191, 36, 0.2);
-          color: #fbbf24;
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: 600;
+        .sa-page-sub {
+          margin: 0 0 24px;
+          font-size: 0.95rem;
+          color: #94a3b8;
         }
-        
-        .btn-logout {
-          padding: 10px 18px;
-          background: rgba(239, 68, 68, 0.2);
-          border: 1px solid rgba(239, 68, 68, 0.3);
+
+        .sa-dashboard-head {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 28px;
+        }
+        .sa-dashboard-head .sa-page-title { margin: 0; }
+        .sa-dashboard-head .sa-page-sub { margin: 0; flex: 1; }
+        .sa-refresh-btn {
+          padding: 10px 20px;
           border-radius: 12px;
-          color: white;
-          cursor: pointer;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.08);
+          color: #e2e8f0;
           font-size: 14px;
           font-weight: 600;
+          cursor: pointer;
           transition: all 0.2s;
         }
-        
-        .btn-logout:hover {
-          background: rgba(239, 68, 68, 0.3);
+        .sa-refresh-btn:hover {
+          background: rgba(255, 255, 255, 0.12);
         }
-        
+
+        .sa-summary-section { margin-bottom: 32px; }
+        .sa-summary-heading {
+          margin: 0 0 16px;
+          font-size: 1rem;
+          font-weight: 700;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+        .summary-card {
+          cursor: pointer;
+          transition: transform 0.2s;
+        }
+        .summary-card:hover {
+          transform: translateY(-2px);
+        }
+        .summary-link {
+          display: inline-block;
+          margin-top: 12px;
+          font-size: 13px;
+          color: #38bdf8;
+          font-weight: 600;
+        }
+        .summary-card-sm .summary-values { font-size: 0.9rem; }
+
+        .sa-quick-nav { margin-bottom: 32px; }
+        .sa-quick-nav-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+          gap: 16px;
+        }
+        .sa-quick-card {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+          padding: 20px;
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.05);
+          color: #e2e8f0;
+          cursor: pointer;
+          transition: all 0.2s;
+          text-align: left;
+        }
+        .sa-quick-card:hover {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(56, 189, 248, 0.3);
+          transform: translateY(-2px);
+        }
+        .sa-quick-icon { font-size: 1.75rem; }
+        .sa-quick-label { font-weight: 700; font-size: 1rem; }
+        .sa-quick-desc { font-size: 13px; color: #94a3b8; }
+
+        .sa-recent-section { margin-bottom: 28px; }
+        .sa-recent-card {
+          padding: 20px;
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.05);
+        }
+        .sa-recent-list {
+          list-style: none;
+          margin: 0 0 16px;
+          padding: 0;
+        }
+        .sa-recent-item {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          font-size: 14px;
+        }
+        .sa-recent-item:last-child { border-bottom: none; }
+        .sa-recent-action { font-weight: 600; color: #e2e8f0; }
+        .sa-recent-actor { color: #cbd5e1; }
+        .sa-recent-meta { color: #94a3b8; font-size: 13px; }
+        .sa-recent-time { color: #64748b; font-size: 12px; margin-left: auto; }
+        .sa-recent-status { padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+        .sa-recent-status-found { background: rgba(34, 197, 94, 0.2); color: #86efac; }
+        .sa-recent-status-not_found { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+        .sa-recent-status-error { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+        .sa-recent-empty { margin: 0 0 16px; color: #64748b; font-size: 14px; }
+        .sa-recent-more {
+          padding: 10px 0;
+          border: none;
+          background: none;
+          color: #38bdf8;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        .sa-recent-more:hover { text-decoration: underline; }
+
         .toast {
           position: fixed;
-          top: 16px;
-          right: 16px;
-          padding: 8px 12px;
-          background: rgba(26, 54, 93, 0.92);
+          top: 20px;
+          right: 20px;
+          left: 20px;
+          padding: 14px 18px;
+          background: rgba(30, 41, 59, 0.98);
+          backdrop-filter: blur(12px);
           color: white;
-          border-radius: 8px;
-          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+          border-radius: 14px;
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
           z-index: 120;
           cursor: pointer;
-          max-width: 280px;
-          font-size: 12.5px;
-          line-height: 1.3;
+          font-size: 14px;
+          line-height: 1.4;
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .summary-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-          gap: 12px;
-          margin-bottom: 16px;
+          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+          gap: 20px;
+          margin-bottom: 24px;
         }
 
         .summary-card {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
-          padding: 14px 16px;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 20px;
+          padding: 24px;
           color: #e2e8f0;
           box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
           position: relative;
@@ -1421,7 +1624,7 @@ export default function SuperAdminPage() {
           content: "";
           position: absolute;
           inset: -40%;
-          background: radial-gradient(circle, rgba(56, 189, 248, 0.18), transparent 55%);
+          background: radial-gradient(circle, rgba(56, 189, 248, 0.12), transparent 55%);
           animation: floatGlow 8s ease-in-out infinite alternate;
           pointer-events: none;
         }
@@ -1432,497 +1635,454 @@ export default function SuperAdminPage() {
         }
 
         .summary-title {
-          font-weight: 800;
-          margin-bottom: 6px;
+          font-weight: 700;
+          margin-bottom: 12px;
+          font-size: 1.1rem;
           position: relative;
           z-index: 1;
         }
 
         .summary-values {
           display: flex;
-          gap: 10px;
+          gap: 12px;
           flex-wrap: wrap;
-          font-weight: 700;
+          font-weight: 600;
+          font-size: 0.95rem;
           position: relative;
           z-index: 1;
         }
 
-        .summary-values .good { color: #bbf7d0; }
-        .summary-values .warn { color: #fde68a; }
-        .summary-values .error { color: #fecdd3; }
+        .summary-values .good { color: #86efac; }
+        .summary-values .warn { color: #fde047; }
+        .summary-values .error { color: #fca5a5; }
 
         .summary-pills {
           display: flex;
-          gap: 6px;
+          gap: 8px;
           flex-wrap: wrap;
-          margin-top: 6px;
+          margin-top: 12px;
           position: relative;
           z-index: 1;
         }
-        
-        .main-content {
-          padding: 20px;
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-        
-        .tabs {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-          gap: 10px;
-          margin-bottom: 20px;
-          background: rgba(255, 255, 255, 0.08);
-          padding: 8px;
-          border-radius: 18px;
-          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
-        }
-        
-        .tab {
-          padding: 12px 16px;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 14px;
-          color: #e2e8f0;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.25s ease;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-        }
-        
-        .tab.active {
-          background: linear-gradient(135deg, #22c55e, #3b82f6);
-          color: white;
-          border-color: transparent;
-          box-shadow: 0 12px 32px rgba(34, 197, 94, 0.35);
-          transform: translateY(-2px);
-        }
-        
+
         .section-header {
           display: flex;
+          flex-wrap: wrap;
           justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
+          align-items: flex-start;
+          gap: 16px;
+          margin-bottom: 20px;
         }
-        
-        .section-header h2 {
-          color: white;
-          font-size: 1.25rem;
+
+        .section-header .sa-page-title {
           margin: 0;
+        }
+
+        .section-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
         }
         
         .btn-create {
-          padding: 10px 18px;
+          padding: 12px 20px;
+          min-height: 44px;
           background: linear-gradient(135deg, #22c55e, #16a34a);
           border: none;
-          border-radius: 12px;
+          border-radius: 14px;
           color: white;
           cursor: pointer;
           font-size: 14px;
           font-weight: 600;
           transition: all 0.2s;
         }
-        
         .btn-create:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 8px 20px rgba(34, 197, 94, 0.4);
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4);
         }
-        
+
         .card {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
-          padding: 16px 18px;
-          box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 20px;
+          padding: 20px;
+          box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
           color: #e2e8f0;
-          backdrop-filter: blur(8px);
+          backdrop-filter: blur(10px);
         }
 
         .users-card,
         .checks-card {
-          background: rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.06);
           border-radius: 20px;
           padding: 20px;
-          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
-          backdrop-filter: blur(8px);
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          backdrop-filter: blur(10px);
         }
 
         .users-card.compact .user-item {
-          padding: 10px 12px;
+          padding: 12px 14px;
           gap: 10px;
         }
 
-        .users-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3);
-        }
-        
         .users-list,
         .checks-list {
           display: flex;
           flex-direction: column;
-          gap: 12px;
-        }
-        
-        .user-item {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 14px 16px;
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 14px;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          gap: 14px;
         }
 
-        .user-item:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+        .user-item {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 14px;
+          padding: 16px 18px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          transition: background 0.2s;
         }
-        
+        .user-item:hover {
+          background: rgba(255, 255, 255, 0.07);
+        }
+        .user-item.fade-card {
+          animation: saFadeIn 0.25s ease-out;
+        }
+
         .user-avatar-sm {
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
+          width: 48px;
+          height: 48px;
+          min-width: 48px;
+          border-radius: 14px;
           background: linear-gradient(135deg, #3b82f6, #2563eb);
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
           font-weight: 700;
-          font-size: 1rem;
-          box-shadow: 0 8px 18px rgba(59, 130, 246, 0.35);
+          font-size: 1.1rem;
         }
-        
+
         .user-details {
           flex: 1;
+          min-width: 0;
         }
-        
+
         .user-name {
           font-weight: 700;
           color: #e2e8f0;
-          margin-bottom: 2px;
+          margin-bottom: 4px;
+          font-size: 1rem;
         }
-        
+
         .user-meta {
-          font-size: 12px;
-          color: #cbd5e1;
+          font-size: 13px;
+          color: #94a3b8;
         }
-        
+
         .user-actions {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
           flex-wrap: wrap;
         }
-        
+
         .status-badge {
-          padding: 6px 12px;
-          border-radius: 20px;
+          padding: 8px 14px;
+          border-radius: 12px;
           font-size: 12px;
           font-weight: 600;
-          border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        
         .status-badge.active {
-          background: rgba(22, 101, 52, 0.2);
-          color: #bbf7d0;
+          background: rgba(34, 197, 94, 0.2);
+          color: #86efac;
         }
-        
         .status-badge.inactive {
-          background: rgba(153, 27, 27, 0.2);
-          color: #fecdd3;
+          background: rgba(239, 68, 68, 0.2);
+          color: #fca5a5;
         }
-        
+
         .btn-toggle {
-          padding: 6px 12px;
+          padding: 8px 14px;
+          min-height: 40px;
           background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 12px;
           color: #e2e8f0;
           cursor: pointer;
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 600;
           transition: all 0.2s;
+        }
+        .btn-toggle:hover {
+          background: rgba(255, 255, 255, 0.12);
         }
 
         .action-buttons {
           display: flex;
-          gap: 6px;
+          gap: 8px;
           flex-wrap: wrap;
         }
 
         .btn-small {
-          padding: 6px 10px;
-          border-radius: 8px;
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          background: #f8fafc;
-          color: #1f2937;
-          cursor: pointer;
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .btn-small.danger {
-          border-color: #fecaca;
-          background: #fff1f2;
-          color: #b91c1c;
-        }
-
-        .role-select {
-          background: #f8fafc;
-          color: #1f2937;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          padding: 6px 8px;
-          font-size: 12px;
-          font-weight: 600;
-        }
-        
-        .btn-toggle:hover {
-          background: #e2e8f0;
-        }
-        
-        .check-item {
-          padding: 16px;
-          background: #f8fafc;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
-        }
-        
-        .check-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 12px;
-        }
-        
-        .check-type {
-          font-weight: 600;
-          color: #1e293b;
-          font-size: 14px;
-        }
-        
-        .check-status {
-          padding: 6px 12px;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: 600;
-        }
-        
-        .check-status.found {
-          background: #dcfce7;
-          color: #166534;
-        }
-        
-        .check-status.not_found {
-          background: #fee2e2;
-          color: #991b1b;
-        }
-        
-        .check-status.error {
-          background: #fef3c7;
-          color: #92400e;
-        }
-        
-        .check-details {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          margin-bottom: 12px;
-        }
-        
-        .check-field {
-          font-size: 13px;
-          color: #475569;
-        }
-        
-        .check-field strong {
-          color: #1e293b;
-          margin-right: 4px;
-        }
-        
-        .check-footer {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding-top: 12px;
-          border-top: 1px solid #e2e8f0;
-        }
-        
-        .checker-info {
-          font-size: 12px;
-          color: #64748b;
-        }
-        
-        .checker-info strong {
-          color: #475569;
-        }
-        
-        .check-time {
-          font-size: 11px;
-          color: #94a3b8;
-        }
-        
-        .btn-view-result {
-          display: inline-block;
-          margin-top: 12px;
           padding: 8px 14px;
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
-          color: white;
-          text-decoration: none;
-          border-radius: 8px;
+          min-height: 38px;
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.08);
+          color: #e2e8f0;
+          cursor: pointer;
           font-size: 13px;
           font-weight: 600;
           transition: all 0.2s;
         }
-        
-        .btn-view-result:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        .btn-small.danger {
+          border-color: rgba(239, 68, 68, 0.4);
+          background: rgba(239, 68, 68, 0.15);
+          color: #fca5a5;
+        }
+        .btn-small:hover {
+          background: rgba(255, 255, 255, 0.12);
+        }
+        .btn-small.danger:hover {
+          background: rgba(239, 68, 68, 0.25);
+        }
+
+        .role-select {
+          min-height: 40px;
+          padding: 8px 12px;
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(15, 23, 42, 0.6);
+          color: #e2e8f0;
+          font-size: 13px;
+          font-weight: 600;
         }
         
+        .check-item {
+          padding: 18px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .check-header {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+        .check-type {
+          font-weight: 600;
+          color: #e2e8f0;
+          font-size: 14px;
+        }
+        .check-status {
+          padding: 8px 14px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+        }
+        .check-status.found {
+          background: rgba(34, 197, 94, 0.2);
+          color: #86efac;
+        }
+        .check-status.not_found {
+          background: rgba(239, 68, 68, 0.2);
+          color: #fca5a5;
+        }
+        .check-status.error {
+          background: rgba(245, 158, 11, 0.2);
+          color: #fcd34d;
+        }
+        .check-details {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          margin-bottom: 12px;
+        }
+        .check-field {
+          font-size: 13px;
+          color: #94a3b8;
+        }
+        .check-field strong {
+          color: #e2e8f0;
+          margin-right: 6px;
+        }
+        .check-footer {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+          padding-top: 12px;
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .checker-info {
+          font-size: 13px;
+          color: #94a3b8;
+        }
+        .check-time {
+          font-size: 12px;
+          color: #64748b;
+        }
+        .btn-view-result {
+          display: inline-block;
+          margin-top: 12px;
+          padding: 10px 18px;
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
+          color: white;
+          text-decoration: none;
+          border-radius: 12px;
+          font-size: 14px;
+          font-weight: 600;
+          transition: all 0.2s;
+        }
+        .btn-view-result:hover {
+          opacity: 0.95;
+          transform: translateY(-1px);
+        }
+
         .empty-state {
           text-align: center;
           padding: 48px 24px;
-          color: #64748b;
+          color: #94a3b8;
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 16px;
           align-items: center;
         }
-        
         .empty-state span:first-child {
           font-size: 3rem;
         }
-        
+
         .modal-overlay {
           position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.6);
+          inset: 0;
+          background: rgba(0, 0, 0, 0.65);
+          backdrop-filter: blur(8px);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 200;
-          padding: 20px;
+          padding: 16px;
+          overflow-y: auto;
         }
-        
         .modal-content {
-          background: white;
-          border-radius: 20px;
+          background: #1e293b;
+          border-radius: 24px;
           width: 100%;
           max-width: 480px;
-          padding: 24px;
+          padding: 28px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          margin: auto;
         }
-        
         .modal-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
+          margin-bottom: 24px;
         }
-        
         .modal-header h3 {
-          font-size: 1.25rem;
+          font-size: 1.3rem;
           font-weight: 700;
           margin: 0;
-          color: #1e293b;
+          color: white;
         }
-        
         .close-btn {
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          background: #f1f5f9;
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.08);
           border: none;
           cursor: pointer;
-          font-size: 18px;
-          color: #64748b;
+          font-size: 1.2rem;
+          color: #94a3b8;
+          transition: background 0.2s;
         }
-        
         .close-btn:hover {
-          background: #e2e8f0;
+          background: rgba(255, 255, 255, 0.14);
         }
-        
+        .form-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 16px;
+          margin-bottom: 20px;
+        }
         .form-group {
-          margin-bottom: 16px;
+          margin-bottom: 20px;
         }
-        
         .form-label {
           display: block;
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 600;
-          color: #475569;
-          margin-bottom: 6px;
+          color: #cbd5e1;
+          margin-bottom: 8px;
         }
-        
         .input {
           width: 100%;
-          padding: 12px 14px;
-          border-radius: 10px;
-          border: 1px solid #e2e8f0;
-          background: #f8fafc;
-          font-size: 15px;
-          transition: all 0.15s ease;
+          padding: 14px 18px;
+          min-height: 48px;
+          border-radius: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(15, 23, 42, 0.6);
+          color: white;
+          font-size: 16px;
+          transition: all 0.2s;
         }
-        
         .input:focus {
           outline: none;
-          border-color: #3b82f6;
-          background: white;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+          border-color: rgba(56, 189, 248, 0.5);
+          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
         }
-        
+        .input::placeholder {
+          color: #64748b;
+        }
         .modal-actions {
           display: flex;
           gap: 12px;
-          margin-top: 24px;
+          margin-top: 28px;
+          flex-wrap: wrap;
         }
-        
         .btn-primary {
           flex: 1;
-          padding: 12px 20px;
+          min-width: 140px;
+          padding: 14px 24px;
+          min-height: 48px;
           background: linear-gradient(135deg, #22c55e, #0ea5e9);
           color: white;
           border: none;
-          border-radius: 12px;
-          font-size: 15px;
+          border-radius: 14px;
+          font-size: 16px;
           font-weight: 700;
           cursor: pointer;
-          transition: all 0.25s ease;
-          box-shadow: 0 10px 28px rgba(34, 197, 94, 0.35);
+          transition: all 0.2s;
         }
-        
         .btn-primary:hover:not(:disabled) {
-          transform: translateY(-1px);
-          box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+          transform: translateY(-2px);
         }
-        
         .btn-primary:disabled {
-          opacity: 0.7;
+          opacity: 0.6;
           cursor: not-allowed;
         }
-        
         .btn-secondary {
           flex: 1;
-          padding: 12px 20px;
-          background: rgba(255, 255, 255, 0.1);
+          min-width: 120px;
+          padding: 14px 24px;
+          min-height: 48px;
+          background: rgba(255, 255, 255, 0.08);
           color: #e2e8f0;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 12px;
-          font-size: 14px;
-          font-weight: 700;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 14px;
+          font-size: 15px;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.25s ease;
+          transition: all 0.2s;
         }
-        
         .btn-secondary:hover {
-          background: rgba(255, 255, 255, 0.2);
-          transform: translateY(-1px);
+          background: rgba(255, 255, 255, 0.12);
         }
 
         .policies-grid {
@@ -1931,15 +2091,14 @@ export default function SuperAdminPage() {
           gap: 12px;
           margin-top: 12px;
         }
-
         .policy-item {
           display: flex;
           align-items: center;
           gap: 8px;
           padding: 12px;
           background: rgba(255, 255, 255, 0.06);
-          border-radius: 10px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
           color: white;
           font-weight: 600;
         }
@@ -1947,60 +2106,71 @@ export default function SuperAdminPage() {
         .log-table {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 10px;
         }
-
-        .log-header, .log-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr 1fr;
-          gap: 8px;
-          padding: 10px;
-          border-radius: 10px;
-        }
-
         .log-header {
-          background: rgba(255, 255, 255, 0.08);
-          color: #cbd5e1;
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr 1.4fr;
+          gap: 12px;
+          padding: 14px 16px;
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.06);
+          color: #94a3b8;
           font-weight: 700;
+          font-size: 12px;
+          text-transform: uppercase;
         }
-
         .log-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr 1.4fr;
+          gap: 12px;
+          padding: 14px 16px;
+          border-radius: 14px;
           background: rgba(255, 255, 255, 0.04);
-          color: white;
+          color: #e2e8f0;
           font-size: 14px;
-          border: 1px solid rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.06);
         }
 
         .priv-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 10px;
+          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+          gap: 12px;
           margin-top: 16px;
         }
-
         .priv-item {
           display: flex;
           align-items: center;
           gap: 10px;
-          padding: 10px;
-          border-radius: 10px;
+          padding: 12px 14px;
+          border-radius: 12px;
           border: 1px solid rgba(255, 255, 255, 0.08);
           background: rgba(255, 255, 255, 0.04);
-          color: white;
+          color: #e2e8f0;
           font-weight: 600;
+          font-size: 13px;
+          cursor: pointer;
+        }
+        .priv-item input {
+          width: 18px;
+          height: 18px;
+          accent-color: #38bdf8;
         }
 
         .officer-priv-table-wrap {
           overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          margin: 16px 0;
         }
         .officer-priv-table {
           width: 100%;
+          min-width: 400px;
           border-collapse: collapse;
           font-size: 14px;
         }
         .officer-priv-table th,
         .officer-priv-table td {
-          padding: 12px 16px;
+          padding: 14px 16px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           text-align: left;
         }
@@ -2017,125 +2187,202 @@ export default function SuperAdminPage() {
         .officer-priv-check-label {
           display: inline-flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
           cursor: pointer;
           color: #cbd5e1;
         }
         .officer-priv-check-label input {
-          width: 18px;
-          height: 18px;
-          accent-color: #22c55e;
+          width: 20px;
+          height: 20px;
+          accent-color: #38bdf8;
         }
 
         .priv-group {
-          margin-top: 12px;
+          margin-top: 20px;
         }
-
         .priv-group-title {
-          font-weight: 800;
+          font-weight: 700;
           color: #e2e8f0;
-          margin-bottom: 6px;
+          margin-bottom: 10px;
           font-size: 14px;
         }
-
         .template-row {
           display: flex;
+          flex-wrap: wrap;
           align-items: center;
-          justify-content: space-between;
           gap: 12px;
-          margin: 10px 0;
+          margin: 16px 0;
         }
-
         .label-row {
           display: flex;
           align-items: center;
           gap: 8px;
-          margin: 6px 0 10px;
+          margin: 8px 0 12px;
           flex-wrap: wrap;
         }
-
         .label {
           font-weight: 700;
           color: #e2e8f0;
         }
-
         .label-muted {
-          color: #cbd5e1;
-          font-size: 12px;
+          color: #94a3b8;
+          font-size: 13px;
         }
 
         .filters-row {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 10px;
-          margin-bottom: 12px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          margin-bottom: 16px;
           align-items: center;
         }
-
+        .filters-row .input {
+          min-width: 160px;
+          flex: 1;
+        }
         .bulk-row {
           display: flex;
+          flex-wrap: wrap;
           justify-content: space-between;
           align-items: center;
-          margin: 10px 0 14px;
+          gap: 12px;
+          margin: 16px 0;
         }
-
         .stat-chips {
           display: flex;
           flex-wrap: wrap;
-          gap: 6px;
+          gap: 8px;
         }
-
         .chip {
-          padding: 6px 10px;
+          padding: 8px 14px;
           background: rgba(255, 255, 255, 0.08);
           color: #e2e8f0;
           border-radius: 999px;
-          font-size: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          font-size: 13px;
+          font-weight: 600;
+          border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .policy-table {
           display: flex;
           flex-direction: column;
-          gap: 8px;
-        }
-        .policy-header, .policy-row {
-          display: grid;
-          grid-template-columns: 1.2fr repeat(5, 1fr);
-          gap: 8px;
-          padding: 10px;
-          border-radius: 10px;
-          align-items: center;
+          gap: 10px;
         }
         .policy-header {
-          background: rgba(255, 255, 255, 0.08);
-          color: #cbd5e1;
+          display: grid;
+          grid-template-columns: 1.2fr repeat(5, 1fr);
+          gap: 10px;
+          padding: 14px 16px;
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.06);
+          color: #94a3b8;
           font-weight: 700;
+          font-size: 12px;
         }
         .policy-row {
+          display: grid;
+          grid-template-columns: 1.2fr repeat(5, 1fr);
+          gap: 10px;
+          padding: 14px 16px;
+          border-radius: 14px;
           background: rgba(255, 255, 255, 0.04);
-          color: white;
-          border: 1px solid rgba(255, 255, 255, 0.05);
+          color: #e2e8f0;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          align-items: center;
         }
-
         .policy-toggle {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          background: rgba(255, 255, 255, 0.06);
-          padding: 8px 10px;
+          gap: 8px;
+          padding: 8px 12px;
           border-radius: 10px;
           border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.04);
+          cursor: pointer;
         }
-        
+        .policy-toggle input {
+          width: 18px;
+          height: 18px;
+          accent-color: #38bdf8;
+        }
+
+        .muted {
+          color: #94a3b8;
+          font-size: 14px;
+        }
+        .filter-check {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          color: #cbd5e1;
+          font-size: 14px;
+        }
+        .filter-check input {
+          width: 18px;
+          height: 18px;
+          accent-color: #38bdf8;
+        }
+
         @media (max-width: 768px) {
-          .user-item {
-            flex-wrap: wrap;
+          .toast {
+            left: 12px;
+            right: 12px;
+            top: 12px;
+            padding: 12px 16px;
+            font-size: 13px;
           }
-          
+          .summary-grid {
+            grid-template-columns: 1fr;
+          }
+          .section-header {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .section-actions {
+            justify-content: flex-start;
+          }
+          .user-item {
+            flex-direction: column;
+            align-items: stretch;
+          }
           .user-actions {
             width: 100%;
-            justify-content: flex-end;
+            justify-content: flex-start;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 12px;
+          }
+          .log-table {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+          .log-header,
+          .log-row {
+            min-width: 520px;
+          }
+          .policy-table {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+          .policy-header,
+          .policy-row {
+            min-width: 480px;
+          }
+          .modal-content {
+            padding: 20px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .bulk-row {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .action-buttons {
+            justify-content: stretch;
+          }
+          .action-buttons .btn-small {
+            flex: 1;
           }
         }
       `}</style>

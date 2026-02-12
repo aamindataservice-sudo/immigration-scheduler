@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+
+const CHUNK_ERROR_RELOAD_KEY = "chunkErrorReload";
 
 export default function Error({
   error,
@@ -9,9 +11,28 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [didTryReload, setDidTryReload] = useState(false);
+  const isChunkError =
+    error?.message?.includes("Failed to load chunk") ||
+    error?.message?.includes("Loading chunk");
+
   useEffect(() => {
     console.error("Application error:", error?.message, error?.stack, error?.digest);
   }, [error]);
+
+  // One-time auto reload on chunk error to recover from stale cache
+  useEffect(() => {
+    if (!isChunkError || typeof window === "undefined") return;
+    const alreadyReloaded = sessionStorage.getItem(CHUNK_ERROR_RELOAD_KEY);
+    if (alreadyReloaded === "1") {
+      setDidTryReload(true);
+      return;
+    }
+    sessionStorage.setItem(CHUNK_ERROR_RELOAD_KEY, "1");
+    const url = window.location.pathname + window.location.search;
+    const sep = url.includes("?") ? "&" : "?";
+    window.location.replace(url + sep + "_r=" + Date.now());
+  }, [isChunkError]);
 
   return (
     <div
@@ -65,8 +86,13 @@ export default function Error({
         >
           Go to login
         </button>
-        {error?.message?.includes("Failed to load chunk") && (
+        {isChunkError && (
           <>
+            {didTryReload && (
+              <p style={{ fontSize: "0.85rem", opacity: 0.95, marginBottom: 12, width: "100%" }}>
+                Already tried reloading. Do a hard refresh to bypass cache.
+              </p>
+            )}
             <button
               type="button"
               onClick={() => window.location.reload()}
@@ -82,7 +108,7 @@ export default function Error({
               Hard refresh page
             </button>
             <p style={{ fontSize: "0.8rem", opacity: 0.9, marginTop: 16, width: "100%" }}>
-              Or use Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac) to bypass cache.
+              Or use Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac).
             </p>
           </>
         )}

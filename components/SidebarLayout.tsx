@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 type MenuItem = {
@@ -31,22 +31,36 @@ export default function SidebarLayout({
   countdown,
 }: SidebarLayoutProps) {
   const router = useRouter();
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(["payments", "users", "scheduling"]);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(["payments", "users", "scheduling", "reporting"]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Checker role sees only Check Payment and Check E-Visa (no Dashboard, no other sections)
+  useEffect(() => {
+    const handler = () => setMobileMenuOpen(false);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+
+  // Super Admin: only working sections (no check-payment, check-evisa, scheduling, or view-reports)
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const isCheckerOnly = user?.role === "CHECKER";
-  const menuItems: MenuItem[] = isCheckerOnly
-    ? [
-        { id: "check-payment", label: "Check Payment", icon: "💳", privilegeKey: "canCheckPayment" },
-        { id: "check-evisa", label: "Check E-Visa", icon: "📄", privilegeKey: "canCheckEVisa" },
-      ]
-    : [
-    {
-      id: "dashboard",
-      label: "Dashboard",
-      icon: "🏠",
-    },
+
+  const superAdminMenuItems: MenuItem[] = [
+    { id: "dashboard", label: "Dashboard", icon: "🏠" },
+    { id: "users-list", label: "User Management", icon: "👥" },
+    { id: "payment-history", label: "Payment History", icon: "💳" },
+    { id: "privileges", label: "Privileges", icon: "🔐" },
+    { id: "role-policies", label: "Role Policies", icon: "✅" },
+    { id: "audit-logs", label: "Audit Logs", icon: "📑" },
+  ];
+
+  const checkerMenuItems: MenuItem[] = [
+    { id: "check-payment", label: "Check Payment", icon: "💳", privilegeKey: "canCheckPayment" },
+    { id: "check-evisa", label: "Check E-Visa", icon: "📄", privilegeKey: "canCheckEVisa" },
+  ];
+
+  const adminMenuItems: MenuItem[] = [
+    { id: "dashboard", label: "Dashboard", icon: "🏠" },
     {
       id: "payments",
       label: "Payments & Visa",
@@ -63,10 +77,8 @@ export default function SidebarLayout({
       icon: "👥",
       subItems: [
         { id: "users-list", label: "User Management", icon: "👥", privilegeKey: "canCreateUser" },
-        { id: "reset-passwords", label: "Reset Passwords", icon: "🔑", privilegeKey: "canResetPassword" },
-        { id: "privileges", label: "Manage Privileges", icon: "🔐", privilegeKey: "canManagePrivileges" },
+        { id: "privileges", label: "Privileges", icon: "🔐", privilegeKey: "canManagePrivileges" },
         { id: "role-policies", label: "Role Policies", icon: "✅", privilegeKey: "canManageRoles" },
-        { id: "export-users", label: "Export Users", icon: "⬇️", privilegeKey: "canExportUsers" },
       ],
     },
     {
@@ -85,11 +97,16 @@ export default function SidebarLayout({
       label: "Reporting",
       icon: "📑",
       subItems: [
-        { id: "reports", label: "View Reports", icon: "📊", privilegeKey: "canViewReports" },
         { id: "audit-logs", label: "Audit Logs", icon: "📑", privilegeKey: "canViewAuditLogs" },
       ],
     },
   ];
+
+  const menuItems: MenuItem[] = isSuperAdmin
+    ? superAdminMenuItems
+    : isCheckerOnly
+    ? checkerMenuItems
+    : adminMenuItems;
 
   const hasAccess = (item: MenuItem): boolean => {
     if (user?.role === "SUPER_ADMIN") return true;
@@ -108,13 +125,33 @@ export default function SidebarLayout({
     router.push("/");
   };
 
+  const handleSectionChange = (id: string) => {
+    onSectionChange(id);
+    setMobileMenuOpen(false);
+  };
+
   return (
     <div className="layout">
+      {/* Mobile overlay */}
+      <div
+        className={`sidebar-backdrop ${mobileMenuOpen ? "open" : ""}`}
+        onClick={() => setMobileMenuOpen(false)}
+        aria-hidden
+      />
+
       {/* Sidebar */}
-      <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
+      <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""} ${mobileMenuOpen ? "mobile-open" : ""}`}>
         <div className="sidebar-header">
           <div className="logo">🛫</div>
           {!sidebarCollapsed && <div className="logo-text">Immigration</div>}
+          <button
+            type="button"
+            className="sidebar-close-mobile"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Close menu"
+          >
+            ✕
+          </button>
         </div>
 
         <nav className="sidebar-nav">
@@ -131,12 +168,13 @@ export default function SidebarLayout({
             return (
               <div key={item.id} className="nav-group">
                 <button
+                  type="button"
                   className={`nav-item ${activeSection === item.id ? "active" : ""} ${hasSubItems ? "has-sub" : ""}`}
                   onClick={() => {
                     if (hasSubItems) {
                       toggleMenu(item.id);
                     } else {
-                      onSectionChange(item.id);
+                      handleSectionChange(item.id);
                     }
                   }}
                 >
@@ -156,8 +194,9 @@ export default function SidebarLayout({
                     {visibleSubItems.map((subItem) => (
                       <button
                         key={subItem.id}
+                        type="button"
                         className={`sub-item ${activeSection === subItem.id ? "active" : ""}`}
-                        onClick={() => onSectionChange(subItem.id)}
+                        onClick={() => handleSectionChange(subItem.id)}
                       >
                         <span className="sub-icon">{subItem.icon}</span>
                         <span className="sub-label">{subItem.label}</span>
@@ -177,7 +216,7 @@ export default function SidebarLayout({
               <div className="time-value">{currentTime}</div>
             </div>
           )}
-          <button className="logout-btn" onClick={logout}>
+          <button type="button" className="logout-btn" onClick={logout}>
             <span>🚪</span>
             {!sidebarCollapsed && <span>Logout</span>}
           </button>
@@ -187,7 +226,12 @@ export default function SidebarLayout({
       {/* Main Content */}
       <div className="main-area">
         <header className="top-bar">
-          <button className="toggle-sidebar" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
+          <button
+            type="button"
+            className="toggle-sidebar"
+            onClick={() => (window.innerWidth <= 768 ? setMobileMenuOpen(true) : setSidebarCollapsed(!sidebarCollapsed))}
+            aria-label="Toggle menu"
+          >
             ☰
           </button>
           <div className="user-info-bar">
@@ -209,21 +253,40 @@ export default function SidebarLayout({
         .layout {
           display: flex;
           min-height: 100vh;
-          background: #f3f4f6;
+          background: #0f172a;
+        }
+
+        .sidebar-backdrop {
+          display: none;
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 999;
+          opacity: 0;
+          transition: opacity 0.25s ease;
+          pointer-events: none;
+        }
+        .sidebar-backdrop.open {
+          display: block;
+          opacity: 1;
+          pointer-events: auto;
         }
 
         .sidebar {
           width: 280px;
-          background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%);
+          min-width: 280px;
+          background: linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%);
           color: white;
           display: flex;
           flex-direction: column;
-          transition: width 0.3s ease;
-          box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+          transition: width 0.3s ease, transform 0.3s ease;
+          box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
+          border-right: 1px solid rgba(255, 255, 255, 0.06);
         }
 
         .sidebar.collapsed {
-          width: 70px;
+          width: 72px;
+          min-width: 72px;
         }
 
         .sidebar-header {
@@ -231,7 +294,23 @@ export default function SidebarLayout({
           align-items: center;
           gap: 12px;
           padding: 20px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          flex-shrink: 0;
+        }
+
+        .sidebar-close-mobile {
+          display: none;
+          margin-left: auto;
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          border: none;
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+          font-size: 1.2rem;
+          cursor: pointer;
+          align-items: center;
+          justify-content: center;
         }
 
         .logo {
@@ -275,9 +354,9 @@ export default function SidebarLayout({
         }
 
         .nav-item.active {
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(56, 189, 248, 0.15);
           color: white;
-          border-left: 4px solid #22c55e;
+          border-left: 4px solid #38bdf8;
         }
 
         .nav-icon {
@@ -318,9 +397,9 @@ export default function SidebarLayout({
         }
 
         .sub-item.active {
-          background: rgba(255, 255, 255, 0.12);
+          background: rgba(56, 189, 248, 0.12);
           color: white;
-          border-left: 3px solid #22c55e;
+          border-left: 3px solid #38bdf8;
         }
 
         .sub-icon {
@@ -378,20 +457,32 @@ export default function SidebarLayout({
         }
 
         .top-bar {
-          background: white;
-          padding: 16px 24px;
+          background: rgba(15, 23, 42, 0.9);
+          backdrop-filter: blur(12px);
+          padding: 14px 20px;
           display: flex;
           align-items: center;
-          gap: 20px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+          gap: 16px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .toggle-sidebar {
-          background: none;
-          border: none;
-          font-size: 1.5rem;
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          font-size: 1.25rem;
           cursor: pointer;
-          color: #1e293b;
+          color: #e2e8f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.2s;
+        }
+        .toggle-sidebar:hover {
+          background: rgba(255, 255, 255, 0.12);
         }
 
         .user-info-bar {
@@ -399,17 +490,19 @@ export default function SidebarLayout({
           display: flex;
           align-items: center;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .welcome-text {
           font-weight: 600;
-          color: #1e293b;
+          color: white;
+          font-size: 0.95rem;
         }
 
         .role-badge-top {
-          padding: 4px 12px;
-          background: #dbeafe;
-          color: #1e40af;
+          padding: 6px 14px;
+          background: rgba(56, 189, 248, 0.2);
+          color: #7dd3fc;
           border-radius: 20px;
           font-size: 12px;
           font-weight: 700;
@@ -437,15 +530,47 @@ export default function SidebarLayout({
 
         .content-area {
           flex: 1;
-          padding: 24px;
+          padding: 20px;
           overflow-y: auto;
+          max-width: 100%;
         }
 
         @media (max-width: 768px) {
-          .sidebar:not(.collapsed) {
+          .sidebar {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            bottom: 0;
             z-index: 1000;
+            transform: translateX(-100%);
+            width: 280px !important;
+            min-width: 280px !important;
+          }
+          .sidebar.mobile-open {
+            transform: translateX(0);
+          }
+          .sidebar.collapsed {
+            width: 280px !important;
+            min-width: 280px !important;
+          }
+          .sidebar-close-mobile {
+            display: flex;
+          }
+          .top-bar {
+            padding: 12px 16px;
+          }
+          .welcome-text {
+            font-size: 0.9rem;
+          }
+          .content-area {
+            padding: 16px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .user-info-bar {
+            flex-direction: column;
+            align-items: flex-start;
           }
         }
       `}</style>
