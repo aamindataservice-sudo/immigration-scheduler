@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logAudit } from "@/lib/audit";
 
 /**
  * Check if payment receipt exists
@@ -46,7 +47,6 @@ export async function POST(req: Request) {
     const status: "FOUND" = "FOUND"; // Always "FOUND" since we don't pre-check
     const resultUrl = receiptUrl;
 
-    // Save payment check to database
     const paymentCheck = await prisma.paymentCheck.create({
       data: {
         type: "PAYMENT_RECEIPT",
@@ -55,6 +55,14 @@ export async function POST(req: Request) {
         resultUrl,
         checkedBy,
       },
+    });
+
+    await logAudit({
+      actorId: checkedBy,
+      action: "CHECK_PAYMENT",
+      targetType: "PaymentCheck",
+      targetId: paymentCheck.id,
+      metadata: { serialNumber, status },
     });
 
     return NextResponse.json({

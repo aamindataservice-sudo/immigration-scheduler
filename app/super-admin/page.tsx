@@ -48,6 +48,7 @@ export default function SuperAdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [paymentChecks, setPaymentChecks] = useState<PaymentCheck[]>([]);
   const [loading, setLoading] = useState(false);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [rolePolicies, setRolePolicies] = useState<RolePolicy[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -57,11 +58,41 @@ export default function SuperAdminPage() {
   const [roleFilter, setRoleFilter] = useState<"ALL" | "ADMIN" | "CHECKER" | "OFFICER">("ALL");
   const [showInactiveOnly, setShowInactiveOnly] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [compactView, setCompactView] = useState(false);
   const [showErrorChecks, setShowErrorChecks] = useState(false);
   const [auditSearch, setAuditSearch] = useState("");
   const [auditRoleFilter, setAuditRoleFilter] = useState<"ALL" | "SUPER_ADMIN" | "ADMIN" | "CHECKER" | "OFFICER">("ALL");
-  
+  const [auditUserFilter, setAuditUserFilter] = useState("");
+  const [auditDateFrom, setAuditDateFrom] = useState("");
+  const [auditDateTo, setAuditDateTo] = useState("");
+  const [activitySummary, setActivitySummary] = useState<{
+    totalActivities: number;
+    byAction: Record<string, number>;
+    byRole: Record<string, number>;
+    topUsers: {
+      userId: string;
+      fullName: string;
+      role: string;
+      count: number;
+      checkPayment?: number;
+      checkEvisa?: number;
+      downloadReceipt?: number;
+      scanMe?: number;
+      login?: number;
+      found?: number;
+      notFound?: number;
+      error?: number;
+    }[];
+    lastSeen: { userId: string; fullName: string; role: string; lastSeenAt: string }[];
+  } | null>(null);
+
+  // Pagination
+  const [usersPage, setUsersPage] = useState(1);
+  const [paymentPage, setPaymentPage] = useState(1);
+  const [auditPage, setAuditPage] = useState(1);
+  const USERS_PAGE_SIZE = 15;
+  const PAYMENT_PAGE_SIZE = 15;
+  const AUDIT_PAGE_SIZE = 20;
+
   // Create user form
   const [showCreateChecker, setShowCreateChecker] = useState(false);
   const [newFullName, setNewFullName] = useState("");
@@ -114,14 +145,17 @@ export default function SuperAdminPage() {
   
   const loadUsers = async () => {
     if (!user?.id) return;
+    setUsersLoading(true);
     try {
       const res = await fetch(`/api/users/list?requesterId=${user.id}`);
       const data = await res.json();
       if (data.ok) {
-        setUsers(data.users);
+        setUsers(data.users || []);
       }
     } catch (err) {
       console.error("Failed to load users:", err);
+    } finally {
+      setUsersLoading(false);
     }
   };
   
@@ -154,13 +188,37 @@ export default function SuperAdminPage() {
   const loadAuditLogs = async () => {
     if (!user?.id) return;
     try {
-      const res = await fetch(`/api/audit/logs?requesterId=${user.id}&limit=200`);
+      const params = new URLSearchParams({ requesterId: user.id, limit: "300" });
+      if (auditUserFilter) params.set("userId", auditUserFilter);
+      if (auditRoleFilter !== "ALL") params.set("role", auditRoleFilter);
+      if (auditDateFrom) params.set("dateFrom", auditDateFrom);
+      if (auditDateTo) params.set("dateTo", auditDateTo);
+      const res = await fetch(`/api/audit/logs?${params}`);
       const data = await res.json();
       if (data.ok) {
         setAuditLogs(data.logs || []);
       }
     } catch (err) {
       console.error("Failed to load audit logs:", err);
+    }
+  };
+
+  const loadActivitySummary = async () => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch(`/api/audit/summary?requesterId=${user.id}`);
+      const data = await res.json();
+      if (data.ok) {
+        setActivitySummary({
+          totalActivities: data.totalActivities ?? 0,
+          byAction: data.byAction ?? {},
+          byRole: data.byRole ?? {},
+          topUsers: data.topUsers ?? [],
+          lastSeen: data.lastSeen ?? [],
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load activity summary:", err);
     }
   };
 
@@ -214,8 +272,16 @@ export default function SuperAdminPage() {
       loadRolePolicies();
       loadAuditLogs();
       loadPrivileges();
+      loadActivitySummary();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user?.id && activeTab === "audit-logs") {
+      loadAuditLogs();
+      setAuditPage(1);
+    }
+  }, [user?.id, activeTab, auditUserFilter, auditRoleFilter, auditDateFrom, auditDateTo]);
   
   const createChecker = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -587,6 +653,22 @@ export default function SuperAdminPage() {
     const matchRole = auditRoleFilter === "ALL" ? true : log.actor?.role === auditRoleFilter;
     return matchSearch && matchRole;
   });
+
+  const usersTotalPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PAGE_SIZE));
+  const paymentTotalPages = Math.max(1, Math.ceil(filteredPaymentChecks.length / PAYMENT_PAGE_SIZE));
+  const auditTotalPages = Math.max(1, Math.ceil(filteredAuditLogs.length / AUDIT_PAGE_SIZE));
+  const paginatedUsers = filteredUsers.slice(
+    (usersPage - 1) * USERS_PAGE_SIZE,
+    usersPage * USERS_PAGE_SIZE
+  );
+  const paginatedPaymentChecks = filteredPaymentChecks.slice(
+    (paymentPage - 1) * PAYMENT_PAGE_SIZE,
+    paymentPage * PAYMENT_PAGE_SIZE
+  );
+  const paginatedAuditLogs = filteredAuditLogs.slice(
+    (auditPage - 1) * AUDIT_PAGE_SIZE,
+    auditPage * AUDIT_PAGE_SIZE
+  );
   
   return (
     <SidebarLayout
@@ -608,19 +690,19 @@ export default function SuperAdminPage() {
           <div className="sa-dashboard">
             <div className="sa-dashboard-head">
               <h1 className="sa-page-title">Dashboard</h1>
-              <p className="sa-page-sub">See everything at a glance</p>
+              <p className="sa-page-sub">Overview and quick stats</p>
               <button
                 type="button"
                 className="sa-refresh-btn"
-                onClick={() => user?.id && (loadUsers(), loadPaymentChecks(), loadAuditLogs(), loadPrivileges(), loadRolePolicies())}
+                onClick={() => user?.id && (loadUsers(), loadPaymentChecks(), loadAuditLogs(), loadPrivileges(), loadRolePolicies(), loadActivitySummary())}
               >
-                🔄 Refresh all
+                🔄 Refresh
               </button>
             </div>
 
             <section className="sa-summary-section">
               <h2 className="sa-summary-heading">Summary</h2>
-              <div className="summary-grid">
+              <div className="summary-grid summary-grid-responsive">
                 <div className="summary-card glow" onClick={() => setActiveTab("users-list")}>
                   <div className="summary-title">👥 Users</div>
                   <div className="summary-values">
@@ -629,28 +711,35 @@ export default function SuperAdminPage() {
                     <span>{stats.inactive} inactive</span>
                   </div>
                   <div className="summary-pills">
-                    <span className="chip">Admins {stats.admins}</span>
-                    <span className="chip">Checkers {stats.checkers}</span>
-                    <span className="chip">Officers {stats.officers}</span>
+                    <span className="chip">Admin {stats.admins}</span>
+                    <span className="chip">Checker {stats.checkers}</span>
+                    <span className="chip">Officer {stats.officers}</span>
                   </div>
-                  <span className="summary-link">View users →</span>
+                  <span className="summary-link">User Management →</span>
                 </div>
                 <div className="summary-card glow" onClick={() => setActiveTab("payment-history")}>
-                  <div className="summary-title">💳 Payment Checks</div>
+                  <div className="summary-title">💳 Payment & E-Visa</div>
                   <div className="summary-values">
-                    <span>{paymentStats.total} total</span>
+                    <span>{paymentStats.total} checks</span>
                     <span className="good">{paymentStats.found} found</span>
                     <span className="warn">{paymentStats.notFound} not found</span>
                     <span className="error">{paymentStats.error} errors</span>
                   </div>
-                  <span className="summary-link">View history →</span>
+                  <span className="summary-link">Payment History →</span>
                 </div>
-                <div className="summary-card glow summary-card-sm" onClick={() => setActiveTab("audit-logs")}>
-                  <div className="summary-title">📑 Audit Logs</div>
+                <div className="summary-card glow" onClick={() => setActiveTab("audit-logs")}>
+                  <div className="summary-title">📊 Activity</div>
                   <div className="summary-values">
-                    <span>{auditLogs.length} entries</span>
+                    <span>{activitySummary?.totalActivities ?? auditLogs.length} total actions</span>
                   </div>
-                  <span className="summary-link">View logs →</span>
+                  <div className="summary-pills">
+                    {activitySummary && Object.keys(activitySummary.byAction).length > 0 && (
+                      Object.entries(activitySummary.byAction).slice(0, 4).map(([k, n]) => (
+                        <span key={k} className="chip">{k.replace(/_/g, " ")} {n}</span>
+                      ))
+                    )}
+                  </div>
+                  <span className="summary-link">Audit Logs →</span>
                 </div>
               </div>
             </section>
@@ -666,7 +755,7 @@ export default function SuperAdminPage() {
                 <button type="button" className="sa-quick-card" onClick={() => setActiveTab("payment-history")}>
                   <span className="sa-quick-icon">💳</span>
                   <span className="sa-quick-label">Payment History</span>
-                  <span className="sa-quick-desc">All payment & e-Visa checks</span>
+                  <span className="sa-quick-desc">Payment & e-Visa checks</span>
                 </button>
                 <button type="button" className="sa-quick-card" onClick={() => setActiveTab("privileges")}>
                   <span className="sa-quick-icon">🔐</span>
@@ -676,7 +765,7 @@ export default function SuperAdminPage() {
                 <button type="button" className="sa-quick-card" onClick={() => setActiveTab("role-policies")}>
                   <span className="sa-quick-icon">✅</span>
                   <span className="sa-quick-label">Role Policies</span>
-                  <span className="sa-quick-desc">What each role can do</span>
+                  <span className="sa-quick-desc">Role capabilities</span>
                 </button>
                 <button type="button" className="sa-quick-card" onClick={() => setActiveTab("audit-logs")}>
                   <span className="sa-quick-icon">📑</span>
@@ -687,17 +776,68 @@ export default function SuperAdminPage() {
             </section>
 
             <section className="sa-recent-section">
-              <h2 className="sa-summary-heading">Recent activity</h2>
+              <h2 className="sa-summary-heading">Top 10 users by activity</h2>
+              <div className="sa-recent-card sa-top10-wrap">
+                {!activitySummary ? (
+                  <p className="sa-recent-empty">Loading…</p>
+                ) : activitySummary.topUsers.length === 0 ? (
+                  <p className="sa-recent-empty">No activity yet</p>
+                ) : (
+                  <div className="sa-top10-table-wrap">
+                    <table className="sa-top10-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>User</th>
+                          <th>Role</th>
+                          <th>Total</th>
+                          <th>Payment</th>
+                          <th>E-Visa</th>
+                          <th>Scan</th>
+                          <th>Found</th>
+                          <th>Not found</th>
+                          <th>Error</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activitySummary.topUsers.map((u, i) => (
+                          <tr key={u.userId}>
+                            <td>{i + 1}</td>
+                            <td className="sa-top10-name">{u.fullName}</td>
+                            <td>{u.role}</td>
+                            <td><strong>{u.count}</strong></td>
+                            <td>{u.checkPayment ?? 0}</td>
+                            <td>{u.checkEvisa ?? 0}</td>
+                            <td>{u.scanMe ?? 0}</td>
+                            <td className="sa-cell-good">{u.found ?? 0}</td>
+                            <td className="sa-cell-warn">{u.notFound ?? 0}</td>
+                            <td className="sa-cell-error">{u.error ?? 0}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <button type="button" className="sa-recent-more" onClick={() => setActiveTab("audit-logs")}>
+                  View all logs →
+                </button>
+              </div>
+            </section>
+
+            <section className="sa-recent-section">
+              <h2 className="sa-summary-heading">Last seen</h2>
               <div className="sa-recent-card">
-                {filteredAuditLogs.length === 0 ? (
+                {!activitySummary ? (
+                  <p className="sa-recent-empty">Loading…</p>
+                ) : activitySummary.lastSeen.length === 0 ? (
                   <p className="sa-recent-empty">No activity yet</p>
                 ) : (
                   <ul className="sa-recent-list">
-                    {filteredAuditLogs.slice(0, 10).map((log) => (
-                      <li key={log.id} className="sa-recent-item">
-                        <span className="sa-recent-action">{log.action}</span>
-                        <span className="sa-recent-actor">{log.actor?.fullName || "—"} ({log.actor?.role || "—"})</span>
-                        <span className="sa-recent-time">{new Date(log.createdAt).toLocaleString()}</span>
+                    {activitySummary.lastSeen.slice(0, 15).map((u) => (
+                      <li key={u.userId} className="sa-recent-item">
+                        <span className="sa-recent-actor">{u.fullName}</span>
+                        <span className="sa-recent-meta">{u.role}</span>
+                        <span className="sa-recent-time">{new Date(u.lastSeenAt).toLocaleString()}</span>
                       </li>
                     ))}
                   </ul>
@@ -707,61 +847,17 @@ export default function SuperAdminPage() {
                 </button>
               </div>
             </section>
-
-            <section className="sa-recent-section">
-              <h2 className="sa-summary-heading">Recent users</h2>
-              <div className="sa-recent-card">
-                {users.length === 0 ? (
-                  <p className="sa-recent-empty">No users yet</p>
-                ) : (
-                  <ul className="sa-recent-list">
-                    {users.slice(0, 8).map((u) => (
-                      <li key={u.id} className="sa-recent-item">
-                        <span className="sa-recent-actor">{u.fullName}</span>
-                        <span className="sa-recent-meta">{u.role} · {u.isActive ? "Active" : "Inactive"}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <button type="button" className="sa-recent-more" onClick={() => setActiveTab("users-list")}>
-                  Manage users →
-                </button>
-              </div>
-            </section>
-
-            <section className="sa-recent-section">
-              <h2 className="sa-summary-heading">Recent payment checks</h2>
-              <div className="sa-recent-card">
-                {paymentChecks.length === 0 ? (
-                  <p className="sa-recent-empty">No checks yet</p>
-                ) : (
-                  <ul className="sa-recent-list">
-                    {paymentChecks.slice(0, 8).map((check) => (
-                      <li key={check.id} className="sa-recent-item">
-                        <span className="sa-recent-action">{check.type === "PAYMENT_RECEIPT" ? "💳 Payment" : "📄 E-Visa"}</span>
-                        <span className={`sa-recent-status sa-recent-status-${check.status.toLowerCase()}`}>
-                          {check.status === "FOUND" ? "Found" : check.status === "ERROR" ? "Error" : "Not found"}
-                        </span>
-                        <span className="sa-recent-meta">by {check.checkedByUser?.fullName || "—"}</span>
-                        <span className="sa-recent-time">{new Date(check.createdAt).toLocaleString()}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <button type="button" className="sa-recent-more" onClick={() => setActiveTab("payment-history")}>
-                  View all checks →
-                </button>
-              </div>
-            </section>
           </div>
         )}
 
-        {/* Users Tab */}
+        {/* Users Tab - User Management */}
         {activeTab === "users-list" && (
           <div className="sa-section">
             <div className="section-header">
-              <h1 className="sa-page-title">Users</h1>
+              <h1 className="sa-page-title">User Management</h1>
+              <p className="sa-page-sub">Create, edit, and manage users and roles</p>
               <div className="section-actions">
+                <button type="button" className="btn-secondary" onClick={() => { loadUsers(); setUsersPage(1); }}>🔄 Refresh</button>
                 <button type="button" className="btn-secondary" onClick={exportUsers}>⬇️ Export CSV</button>
                 <button type="button" className="btn-create" onClick={() => setShowCreateChecker(true)}>
                   ➕ Create User
@@ -773,10 +869,10 @@ export default function SuperAdminPage() {
                 className="input"
                 placeholder="Search name or phone"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setUsersPage(1); }}
               />
-              <select className="input" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value as any)}>
-                <option value="ALL">All Roles</option>
+              <select className="input" value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value as any); setUsersPage(1); }}>
+                <option value="ALL">All roles</option>
                 <option value="ADMIN">Admin</option>
                 <option value="CHECKER">Checker</option>
                 <option value="OFFICER">Officer</option>
@@ -785,24 +881,16 @@ export default function SuperAdminPage() {
                 <input
                   type="checkbox"
                   checked={showInactiveOnly}
-                  onChange={(e) => setShowInactiveOnly(e.target.checked)}
+                  onChange={(e) => { setShowInactiveOnly(e.target.checked); setUsersPage(1); }}
                 />
                 <span>Inactive only</span>
-              </label>
-              <label className="filter-check">
-                <input
-                  type="checkbox"
-                  checked={compactView}
-                  onChange={(e) => setCompactView(e.target.checked)}
-                />
-                <span>Compact view</span>
               </label>
               <div className="stat-chips">
                 <span className="chip">Total {stats.total}</span>
                 <span className="chip">Active {stats.active}</span>
-                <span className="chip">Admins {stats.admins}</span>
-                <span className="chip">Checkers {stats.checkers}</span>
-                <span className="chip">Officers {stats.officers}</span>
+                <span className="chip">Admin {stats.admins}</span>
+                <span className="chip">Checker {stats.checkers}</span>
+                <span className="chip">Officer {stats.officers}</span>
               </div>
             </div>
             <div className="bulk-row">
@@ -811,154 +899,135 @@ export default function SuperAdminPage() {
                 <button className="btn-small" onClick={() => bulkActivate(true)}>Activate</button>
                 <button className="btn-small" onClick={() => bulkActivate(false)}>Deactivate</button>
                 <button className="btn-small" onClick={bulkResetPasswords}>Reset PW</button>
-                <button className="btn-small" onClick={() => bulkSetRole("CHECKER")}>Set Checker</button>
-                <button className="btn-small" onClick={() => bulkSetRole("OFFICER")}>Set Officer</button>
-                <button
-                  className="btn-small"
-                  onClick={() => {
-                    setSelectedUsers(filteredUsers.map((u) => u.id));
-                  }}
-                >
-                  Select All Filtered
-                </button>
+                <button className="btn-small" onClick={() => bulkSetRole("CHECKER")}>Checker</button>
+                <button className="btn-small" onClick={() => bulkSetRole("OFFICER")}>Officer</button>
+                <button className="btn-small" onClick={() => setSelectedUsers(filteredUsers.map((u) => u.id))}>Select all</button>
               </div>
             </div>
-            
-            {/* Create Checker Modal */}
+
             {showCreateChecker && (
               <div className="modal-overlay" onClick={() => setShowCreateChecker(false)}>
                 <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                   <div className="modal-header">
                     <h3>Create New User</h3>
-                    <button className="close-btn" onClick={() => setShowCreateChecker(false)}>
-                      ✕
-                    </button>
+                    <button className="close-btn" onClick={() => setShowCreateChecker(false)}>✕</button>
                   </div>
                   <form onSubmit={createChecker}>
                     <div className="form-group">
                       <label className="form-label">Full Name</label>
-                      <input
-                        type="text"
-                        className="input"
-                        value={newFullName}
-                        onChange={(e) => setNewFullName(e.target.value)}
-                        placeholder="Enter full name"
-                        required
-                      />
+                      <input type="text" className="input" value={newFullName} onChange={(e) => setNewFullName(e.target.value)} placeholder="Full name" required />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Phone Number</label>
-                      <input
-                        type="text"
-                        className="input"
-                        value={newPhone}
-                        onChange={(e) => setNewPhone(e.target.value)}
-                        placeholder="252xxxxxxxxx"
-                        required
-                      />
+                      <label className="form-label">Phone</label>
+                      <input type="text" className="input" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="252xxxxxxxxx" required />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Password (optional)</label>
-                      <input
-                        type="password"
-                        className="input"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Leave empty for default password"
-                      />
+                      <input type="password" className="input" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Default if empty" />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Role</label>
-                      <select
-                        className="input"
-                        value={newRole}
-                        onChange={(e) => setNewRole(e.target.value as any)}
-                      >
+                      <select className="input" value={newRole} onChange={(e) => setNewRole(e.target.value as any)}>
                         <option value="CHECKER">Checker</option>
                         <option value="OFFICER">Officer</option>
                         <option value="ADMIN">Admin</option>
                       </select>
                     </div>
                     <div className="modal-actions">
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={() => setShowCreateChecker(false)}
-                      >
-                        Cancel
-                      </button>
-                      <button type="submit" className="btn-primary" disabled={loading}>
-                        {loading ? "Creating..." : "Create User"}
-                      </button>
+                      <button type="button" className="btn-secondary" onClick={() => setShowCreateChecker(false)}>Cancel</button>
+                      <button type="submit" className="btn-primary" disabled={loading}>{loading ? "Creating…" : "Create"}</button>
                     </div>
                   </form>
                 </div>
               </div>
             )}
-            
-            <div className={`users-card ${compactView ? "compact" : ""}`}>
-              {filteredUsers.length === 0 ? (
+
+            <div className="users-card users-list-card">
+              <div className="users-list-card-head">
+                <h3 className="users-list-card-title">Users list</h3>
+                <span className="users-list-card-count">{filteredUsers.length} user{filteredUsers.length !== 1 ? "s" : ""}</span>
+              </div>
+
+              {usersLoading && users.length === 0 ? (
+                <div className="empty-state users-loading-state">
+                  <span className="loading-spinner">⟳</span>
+                  <span>Loading users…</span>
+                </div>
+              ) : filteredUsers.length === 0 ? (
                 <div className="empty-state">
                   <span>👥</span>
                   <span>No users match filters</span>
-                  <button className="btn-primary" onClick={() => setShowCreateChecker(true)}>
-                    Create User
-                  </button>
+                  <button type="button" className="btn-primary" onClick={() => setShowCreateChecker(true)}>Create User</button>
                 </div>
               ) : (
-                <div className="users-list">
-                  {filteredUsers.map((u) => {
-                    const isSelected = selectedUsers.includes(u.id);
-                    return (
-                      <div key={u.id} className="user-item fade-card">
-                        <div className="user-avatar-sm">{u.fullName?.charAt(0)?.toUpperCase() || "?"}</div>
-                        <div className="user-details">
-                          <div className="user-name">{u.fullName}</div>
-                          <div className="user-meta">
-                            {u.phone} • {u.role}
-                          </div>
-                          <label className="filter-check" style={{ marginTop: 6 }}>
+                <>
+                  <div className="sa-users-table-wrap">
+                    <table className="sa-users-table">
+                      <thead>
+                        <tr>
+                          <th className="sa-users-th-check">
                             <input
                               type="checkbox"
-                              checked={isSelected}
+                              checked={paginatedUsers.length > 0 && paginatedUsers.every((u) => selectedUsers.includes(u.id))}
                               onChange={(e) => {
-                                setSelectedUsers((prev) =>
-                                  e.target.checked ? [...prev, u.id] : prev.filter((id) => id !== u.id)
-                                );
+                                if (e.target.checked) setSelectedUsers((prev) => [...new Set([...prev, ...paginatedUsers.map((u) => u.id)])]);
+                                else setSelectedUsers((prev) => prev.filter((id) => !paginatedUsers.some((u) => u.id === id)));
                               }}
+                              aria-label="Select page"
                             />
-                            <span>Select</span>
-                          </label>
-                        </div>
-                        <div className="user-actions">
-                          <span className={`status-badge ${u.isActive ? "active" : "inactive"}`}>
-                            {u.isActive ? "Active" : "Inactive"}
-                          </span>
-                          <select
-                            className="role-select"
-                            value={u.role}
-                            onChange={(e) => changeUserRole(u.id, e.target.value)}
-                          >
-                            <option value="ADMIN">Admin</option>
-                            <option value="CHECKER">Checker</option>
-                            <option value="OFFICER">Officer</option>
-                          </select>
-                          <div className="action-buttons">
-                            <button className="btn-toggle" onClick={() => toggleUserStatus(u.id, u.isActive)}>
-                              {u.isActive ? "Deactivate" : "Activate"}
-                            </button>
-                            <button className="btn-small" onClick={() => resetUserPassword(u.id)}>
-                              🔑 Reset PW
-                            </button>
-                            <button className="btn-small danger" onClick={() => deleteUser(u.id)}>
-                              🗑️ Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                          </th>
+                          <th>Name</th>
+                          <th>Phone</th>
+                          <th>Role</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedUsers.map((u) => {
+                          const isSelected = selectedUsers.includes(u.id);
+                          return (
+                            <tr key={u.id} className="sa-users-tr">
+                              <td className="sa-users-td-check">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(e) => setSelectedUsers((prev) => e.target.checked ? [...prev, u.id] : prev.filter((id) => id !== u.id))}
+                                  aria-label={`Select ${u.fullName}`}
+                                />
+                              </td>
+                              <td className="sa-users-name">{u.fullName}</td>
+                              <td className="sa-users-td-phone">{u.phone}</td>
+                              <td>
+                                <select className="role-select-inline" value={u.role} onChange={(e) => changeUserRole(u.id, e.target.value)}>
+                                  <option value="ADMIN">Admin</option>
+                                  <option value="CHECKER">Checker</option>
+                                  <option value="OFFICER">Officer</option>
+                                </select>
+                              </td>
+                              <td>
+                                <span className={`status-badge ${u.isActive ? "active" : "inactive"}`}>{u.isActive ? "Active" : "Inactive"}</span>
+                              </td>
+                              <td className="sa-users-actions">
+                                <button type="button" className="btn-small" onClick={() => toggleUserStatus(u.id, u.isActive)}>{u.isActive ? "Deactivate" : "Activate"}</button>
+                                <button type="button" className="btn-small" onClick={() => resetUserPassword(u.id)}>Reset PW</button>
+                                <button type="button" className="btn-small danger" onClick={() => deleteUser(u.id)}>Delete</button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="pagination-bar">
+                    <span className="pagination-info">Showing {(usersPage - 1) * USERS_PAGE_SIZE + 1}–{Math.min(usersPage * USERS_PAGE_SIZE, filteredUsers.length)} of {filteredUsers.length}</span>
+                    <div className="pagination-controls">
+                      <button type="button" className="btn-small" disabled={usersPage <= 1} onClick={() => setUsersPage((p) => p - 1)}>← Prev</button>
+                      <span className="pagination-page">Page {usersPage} of {usersTotalPages}</span>
+                      <button type="button" className="btn-small" disabled={usersPage >= usersTotalPages} onClick={() => setUsersPage((p) => p + 1)}>Next →</button>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -968,17 +1037,16 @@ export default function SuperAdminPage() {
         {activeTab === "payment-history" && (
           <div className="sa-section">
             <div className="section-header">
-              <h1 className="sa-page-title">Payment Checks</h1>
-              <label className="filter-check">
-                <input
-                  type="checkbox"
-                  checked={showErrorChecks}
-                  onChange={(e) => setShowErrorChecks(e.target.checked)}
-                />
-                <span>Show errors only</span>
-              </label>
+              <h1 className="sa-page-title">Payment History</h1>
+              <p className="sa-page-sub">Payment receipts and e-Visa checks</p>
+              <div className="section-actions">
+                <button type="button" className="btn-secondary" onClick={() => { loadPaymentChecks(); setPaymentPage(1); }}>🔄 Refresh</button>
+                <label className="filter-check">
+                  <input type="checkbox" checked={showErrorChecks} onChange={(e) => { setShowErrorChecks(e.target.checked); setPaymentPage(1); }} />
+                  <span>Errors only</span>
+                </label>
+              </div>
             </div>
-            
             <div className="checks-card">
               {filteredPaymentChecks.length === 0 ? (
                 <div className="empty-state">
@@ -986,62 +1054,46 @@ export default function SuperAdminPage() {
                   <span>No payment checks yet</span>
                 </div>
               ) : (
-                <div className="checks-list">
-                  {filteredPaymentChecks.map((check) => (
-                    <div key={check.id} className="check-item">
-                      <div className="check-header">
-                        <span className="check-type">
-                          {check.type === "PAYMENT_RECEIPT" ? "💳 Payment" : "📄 E-Visa"}
-                        </span>
-                        <span className={`check-status ${check.status.toLowerCase()}`}>
-                          {check.status === "FOUND"
-                            ? "✅ Found"
-                            : check.status === "ERROR"
-                            ? "⚠️ Error"
-                            : "❌ Not Found"}
-                        </span>
-                      </div>
-                      <div className="check-details">
-                        {check.type === "PAYMENT_RECEIPT" ? (
-                          <div className="check-field">
-                            <strong>Serial:</strong> {check.serialNumber}
-                          </div>
-                        ) : (
-                          <>
-                            <div className="check-field">
-                              <strong>Passport:</strong> {check.passportNumber}
-                            </div>
-                            <div className="check-field">
-                              <strong>Reference:</strong> {check.referenceNumber}
-                            </div>
-                            <div className="check-field">
-                              <strong>Date:</strong> {check.visaMonth} {check.visaYear}
-                            </div>
-                          </>
+                <>
+                  <div className="checks-list">
+                    {paginatedPaymentChecks.map((check) => (
+                      <div key={check.id} className="check-item">
+                        <div className="check-header">
+                          <span className="check-type">{check.type === "PAYMENT_RECEIPT" ? "💳 Payment" : "📄 E-Visa"}</span>
+                          <span className={`check-status ${check.status.toLowerCase()}`}>
+                            {check.status === "FOUND" ? "✅ Found" : check.status === "ERROR" ? "⚠️ Error" : "❌ Not Found"}
+                          </span>
+                        </div>
+                        <div className="check-details">
+                          {check.type === "PAYMENT_RECEIPT" ? (
+                            <div className="check-field"><strong>Serial:</strong> {check.serialNumber}</div>
+                          ) : (
+                            <>
+                              <div className="check-field"><strong>Passport:</strong> {check.passportNumber}</div>
+                              <div className="check-field"><strong>Ref:</strong> {check.referenceNumber}</div>
+                              <div className="check-field"><strong>Date:</strong> {check.visaMonth} {check.visaYear}</div>
+                            </>
+                          )}
+                        </div>
+                        <div className="check-footer">
+                          <span className="checker-info">{check.checkedByUser.fullName} ({check.checkedByUser.role})</span>
+                          <span className="check-time">{new Date(check.createdAt).toLocaleString()}</span>
+                        </div>
+                        {check.resultUrl && (
+                          <a href={check.resultUrl} target="_blank" rel="noopener noreferrer" className="btn-view-result">🔗 View Result</a>
                         )}
                       </div>
-                      <div className="check-footer">
-                        <div className="checker-info">
-                          <strong>Checked by:</strong> {check.checkedByUser.fullName} (
-                          {check.checkedByUser.role})
-                        </div>
-                        <div className="check-time">
-                          {new Date(check.createdAt).toLocaleString()}
-                        </div>
-                      </div>
-                      {check.resultUrl && (
-                        <a
-                          href={check.resultUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn-view-result"
-                        >
-                          🔗 View Result
-                        </a>
-                      )}
+                    ))}
+                  </div>
+                  <div className="pagination-bar">
+                    <span className="pagination-info">Showing {(paymentPage - 1) * PAYMENT_PAGE_SIZE + 1}–{Math.min(paymentPage * PAYMENT_PAGE_SIZE, filteredPaymentChecks.length)} of {filteredPaymentChecks.length}</span>
+                    <div className="pagination-controls">
+                      <button type="button" className="btn-small" disabled={paymentPage <= 1} onClick={() => setPaymentPage((p) => p - 1)}>← Prev</button>
+                      <span className="pagination-page">Page {paymentPage} of {paymentTotalPages}</span>
+                      <button type="button" className="btn-small" disabled={paymentPage >= paymentTotalPages} onClick={() => setPaymentPage((p) => p + 1)}>Next →</button>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -1373,38 +1425,32 @@ export default function SuperAdminPage() {
           </div>
         )}
 
-        {/* Reports Tab */}
+        {/* Audit Logs Tab */}
         {activeTab === "audit-logs" && (
           <div className="sa-section">
             <div className="section-header">
               <h1 className="sa-page-title">Activity Logs</h1>
+              <p className="sa-page-sub">Filter and export activity history</p>
               <div className="section-actions">
-                <button className="btn-secondary" onClick={loadAuditLogs}>
-                  🔄 Refresh
-                </button>
-                <button className="btn-secondary" onClick={exportAuditCsv}>
-                  ⬇️ Export CSV
-                </button>
+                <button type="button" className="btn-secondary" onClick={() => { loadAuditLogs(); setAuditPage(1); }}>🔄 Refresh</button>
+                <button type="button" className="btn-secondary" onClick={exportAuditCsv}>⬇️ Export CSV</button>
               </div>
             </div>
             <div className="filters-row">
-              <input
-                className="input"
-                placeholder="Search action or actor"
-                value={auditSearch}
-                onChange={(e) => setAuditSearch(e.target.value)}
-              />
-              <select
-                className="input"
-                value={auditRoleFilter}
-                onChange={(e) => setAuditRoleFilter(e.target.value as any)}
-              >
-                <option value="ALL">All Roles</option>
+              <input className="input" placeholder="Search action or actor" value={auditSearch} onChange={(e) => { setAuditSearch(e.target.value); setAuditPage(1); }} />
+              <select className="input" value={auditUserFilter} onChange={(e) => setAuditUserFilter(e.target.value)}>
+                <option value="">All users</option>
+                {users.map((u) => (<option key={u.id} value={u.id}>{u.fullName} ({u.role})</option>))}
+              </select>
+              <select className="input" value={auditRoleFilter} onChange={(e) => setAuditRoleFilter(e.target.value as any)}>
+                <option value="ALL">All roles</option>
                 <option value="SUPER_ADMIN">Super Admin</option>
                 <option value="ADMIN">Admin</option>
                 <option value="CHECKER">Checker</option>
                 <option value="OFFICER">Officer</option>
               </select>
+              <input type="date" className="input" value={auditDateFrom} onChange={(e) => setAuditDateFrom(e.target.value)} />
+              <input type="date" className="input" value={auditDateTo} onChange={(e) => setAuditDateTo(e.target.value)} />
             </div>
             <div className="card">
               {filteredAuditLogs.length === 0 ? (
@@ -1413,24 +1459,32 @@ export default function SuperAdminPage() {
                   <span>No activity recorded yet</span>
                 </div>
               ) : (
-                <div className="log-table">
-                  <div className="log-header">
-                    <span>Action</span>
-                    <span>Actor</span>
-                    <span>Target</span>
-                    <span>Time</span>
-                  </div>
-                  {filteredAuditLogs.map((log) => (
-                    <div key={log.id} className="log-row">
-                      <span>{log.action}</span>
-                      <span>
-                        {log.actor?.fullName || "—"} ({log.actor?.role || "N/A"})
-                      </span>
-                      <span>{log.targetType ? `${log.targetType} ${log.targetId || ""}` : "—"}</span>
-                      <span>{new Date(log.createdAt).toLocaleString()}</span>
+                <>
+                  <div className="log-table">
+                    <div className="log-header">
+                      <span>Action</span>
+                      <span>Actor</span>
+                      <span>Target</span>
+                      <span>Time</span>
                     </div>
-                  ))}
-                </div>
+                    {paginatedAuditLogs.map((log) => (
+                      <div key={log.id} className="log-row">
+                        <span>{log.action}</span>
+                        <span>{log.actor?.fullName || "—"} ({log.actor?.role || "N/A"})</span>
+                        <span>{log.targetType ? `${log.targetType} ${log.targetId || ""}` : "—"}</span>
+                        <span>{new Date(log.createdAt).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="pagination-bar">
+                    <span className="pagination-info">Showing {(auditPage - 1) * AUDIT_PAGE_SIZE + 1}–{Math.min(auditPage * AUDIT_PAGE_SIZE, filteredAuditLogs.length)} of {filteredAuditLogs.length}</span>
+                    <div className="pagination-controls">
+                      <button type="button" className="btn-small" disabled={auditPage <= 1} onClick={() => setAuditPage((p) => p - 1)}>← Prev</button>
+                      <span className="pagination-page">Page {auditPage} of {auditTotalPages}</span>
+                      <button type="button" className="btn-small" disabled={auditPage >= auditTotalPages} onClick={() => setAuditPage((p) => p + 1)}>Next →</button>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -1440,11 +1494,15 @@ export default function SuperAdminPage() {
         .super-admin-content {
           width: 100%;
           max-width: 100%;
+          padding: 0 16px 24px;
+          box-sizing: border-box;
         }
 
         .sa-dashboard,
         .sa-section {
           animation: saFadeIn 0.3s ease-out;
+          max-width: 1400px;
+          margin: 0 auto;
         }
         @keyframes saFadeIn {
           from { opacity: 0; transform: translateY(8px); }
@@ -1583,6 +1641,116 @@ export default function SuperAdminPage() {
           cursor: pointer;
         }
         .sa-recent-more:hover { text-decoration: underline; }
+
+        .sa-activity-summary { margin-bottom: 24px; }
+        .sa-activity-total {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          margin-bottom: 16px;
+        }
+        .sa-activity-total-n { font-size: 28px; font-weight: 700; color: #e2e8f0; }
+        .sa-activity-total-label { font-size: 14px; color: #94a3b8; }
+        .sa-activity-by { display: flex; flex-wrap: wrap; gap: 20px; }
+        .sa-activity-by-block { display: flex; flex-direction: column; gap: 8px; }
+        .sa-activity-by-title { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .sa-activity-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+        .sa-activity-pills span {
+          padding: 6px 12px;
+          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.08);
+          color: #cbd5e1;
+          font-size: 13px;
+        }
+        .sa-activity-count { margin-left: 6px; color: #94a3b8; font-weight: 600; }
+
+        .sa-top10-wrap { overflow: hidden; }
+        .sa-top10-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 12px; }
+        .sa-top10-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
+        .sa-top10-table th, .sa-top10-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); text-align: left; }
+        .sa-top10-table th { color: #94a3b8; font-weight: 600; font-size: 11px; text-transform: uppercase; }
+        .sa-top10-name { font-weight: 600; color: #e2e8f0; }
+        .sa-cell-good { color: #86efac; }
+        .sa-cell-warn { color: #fde047; }
+        .sa-cell-error { color: #fca5a5; }
+
+        .pagination-bar {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          padding: 14px 0 0;
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
+          margin-top: 16px;
+        }
+        .pagination-info { font-size: 13px; color: #94a3b8; }
+        .pagination-controls { display: flex; align-items: center; gap: 12px; }
+        .pagination-page { font-size: 13px; color: #cbd5e1; }
+
+        .users-list-card {
+          display: flex;
+          flex-direction: column;
+          min-height: 280px;
+          border-radius: 16px;
+          overflow: hidden;
+        }
+        .users-list-card-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 12px;
+          padding: 16px 20px;
+          background: rgba(255, 255, 255, 0.05);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .users-list-card-title { margin: 0; font-size: 1.15rem; font-weight: 700; color: #f1f5f9; }
+        .users-list-card-count { font-size: 13px; color: #94a3b8; font-weight: 600; padding: 4px 12px; background: rgba(255,255,255,0.08); border-radius: 20px; }
+        .users-loading-state { min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: #94a3b8; padding: 32px; }
+        .loading-spinner { font-size: 2.2rem; animation: spin 0.9s linear infinite; display: inline-block; color: #38bdf8; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .sa-users-table-wrap {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          margin: 0;
+          display: block;
+          flex: 1;
+          min-height: 120px;
+        }
+        .sa-users-table {
+          width: 100%;
+          min-width: 540px;
+          border-collapse: collapse;
+          font-size: 14px;
+        }
+        .sa-users-table thead { position: sticky; top: 0; z-index: 1; }
+        .sa-users-table th, .sa-users-table td {
+          padding: 14px 16px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          text-align: left;
+          vertical-align: middle;
+          background: rgba(255, 255, 255, 0.02);
+        }
+        .sa-users-table thead tr { background: rgba(30, 41, 59, 0.95); }
+        .sa-users-table thead th {
+          color: #94a3b8;
+          font-weight: 600;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+        .sa-users-table tbody tr.sa-users-tr:nth-child(even) td { background: rgba(255, 255, 255, 0.04); }
+        .sa-users-table tbody tr.sa-users-tr:hover td { background: rgba(255, 255, 255, 0.07); }
+        .sa-users-th-check, .sa-users-td-check { width: 48px; text-align: center; }
+        .sa-users-th-check input, .sa-users-td-check input { width: 18px; height: 18px; accent-color: #38bdf8; cursor: pointer; }
+        .sa-users-name { font-weight: 600; color: #f1f5f9; }
+        .sa-users-td-phone { color: #cbd5e1; font-variant-numeric: tabular-nums; font-size: 13px; }
+        .sa-users-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .role-select-inline { padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.08); color: #e2e8f0; font-size: 13px; min-width: 100px; }
+
+        .summary-grid-responsive { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 
         .toast {
           position: fixed;
@@ -2325,6 +2493,7 @@ export default function SuperAdminPage() {
         }
 
         @media (max-width: 768px) {
+          .super-admin-content { padding: 0 12px 20px; }
           .toast {
             left: 12px;
             right: 12px;
@@ -2332,9 +2501,22 @@ export default function SuperAdminPage() {
             padding: 12px 16px;
             font-size: 13px;
           }
-          .summary-grid {
+          .sa-dashboard-head { flex-direction: column; align-items: stretch; gap: 12px; }
+          .sa-refresh-btn { align-self: flex-start; }
+          .summary-grid,
+          .summary-grid-responsive {
             grid-template-columns: 1fr;
+            gap: 14px;
           }
+          .summary-card { padding: 18px; }
+          .summary-values { font-size: 0.9rem; }
+          .sa-quick-nav-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+          .sa-quick-card { padding: 14px; }
+          .sa-quick-label { font-size: 0.9rem; }
+          .sa-quick-desc { font-size: 12px; }
+          .sa-top10-table-wrap { margin: 0 -4px 12px; }
+          .sa-top10-table th, .sa-top10-table td { padding: 8px 10px; font-size: 12px; }
+          .sa-recent-item { flex-wrap: wrap; gap: 8px; font-size: 13px; }
           .section-header {
             flex-direction: column;
             align-items: stretch;
@@ -2342,6 +2524,7 @@ export default function SuperAdminPage() {
           .section-actions {
             justify-content: flex-start;
           }
+          .pagination-bar { flex-direction: column; align-items: stretch; text-align: center; }
           .user-item {
             flex-direction: column;
             align-items: stretch;
@@ -2352,6 +2535,11 @@ export default function SuperAdminPage() {
             border-top: 1px solid rgba(255, 255, 255, 0.08);
             padding-top: 12px;
           }
+          .users-list-card-head { padding: 12px 16px; }
+          .sa-users-table-wrap { min-height: 100px; }
+          .sa-users-table { min-width: 480px; }
+          .sa-users-table th, .sa-users-table td { padding: 10px 12px; font-size: 13px; }
+          .sa-users-actions { flex-wrap: wrap; }
           .log-table {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
@@ -2374,6 +2562,10 @@ export default function SuperAdminPage() {
         }
 
         @media (max-width: 480px) {
+          .super-admin-content { padding: 0 10px 16px; }
+          .sa-quick-nav-grid { grid-template-columns: 1fr; }
+          .sa-summary-heading { font-size: 1rem; }
+          .users-list-card-head { flex-direction: column; align-items: flex-start; }
           .bulk-row {
             flex-direction: column;
             align-items: stretch;
@@ -2384,6 +2576,7 @@ export default function SuperAdminPage() {
           .action-buttons .btn-small {
             flex: 1;
           }
+          .pagination-controls { flex-wrap: wrap; justify-content: center; }
         }
       `}</style>
       </div>

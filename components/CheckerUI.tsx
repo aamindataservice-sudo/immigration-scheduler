@@ -106,6 +106,50 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
   const [visaMonth, setVisaMonth] = useState(allowedMonths[0]);
   const [evisaResult, setEvisaResult] = useState<EVisaResult | null>(null);
 
+  const [myChecks, setMyChecks] = useState<{ type: string; createdAt: string }[]>([]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`/api/payment/my-checks?userId=${user.id}&limit=200`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok && Array.isArray(data.checks)) setMyChecks(data.checks);
+      })
+      .catch(() => {});
+  }, [user?.id]);
+
+  const todayStart = (() => {
+    try {
+      const d = new Date();
+      const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Mogadishu", year: "numeric", month: "2-digit", day: "2-digit" });
+      const parts = formatter.formatToParts(d);
+      const y = parts.find((p) => p.type === "year")?.value ?? "";
+      const m = parts.find((p) => p.type === "month")?.value ?? "";
+      const day = parts.find((p) => p.type === "day")?.value ?? "";
+      return `${y}-${m}-${day}`;
+    } catch {
+      return new Date().toISOString().slice(0, 10);
+    }
+  })();
+
+  const isToday = (createdAt: string) => {
+    try {
+      const d = new Date(createdAt);
+      const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Mogadishu", year: "numeric", month: "2-digit", day: "2-digit" });
+      const parts = formatter.formatToParts(d);
+      const y = parts.find((p) => p.type === "year")?.value ?? "";
+      const m = parts.find((p) => p.type === "month")?.value ?? "";
+      const day = parts.find((p) => p.type === "day")?.value ?? "";
+      return `${y}-${m}-${day}` === todayStart;
+    } catch {
+      return false;
+    }
+  };
+
+  const paymentToday = myChecks.filter((c) => c.type === "PAYMENT_RECEIPT" && isToday(c.createdAt)).length;
+  const evisaToday = myChecks.filter((c) => c.type === "EVISA" && isToday(c.createdAt)).length;
+  const totalToday = paymentToday + evisaToday;
+
   /** Always open in new tab so receipt/PDF works (mobile and desktop). */
   const openInNewTab = (url: string) => {
     if (!url) return;
@@ -267,6 +311,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
         });
         setMessage(check.status === "FOUND" ? `✅ ${check.message}` : check.status === "NOT_FOUND" ? `❌ ${check.message}` : `⚠️ ${check.message}`);
         setSerialNumber("");
+        fetch(`/api/payment/my-checks?userId=${user.id}&limit=200`).then((r) => r.json()).then((d) => { if (d.ok && Array.isArray(d.checks)) setMyChecks(d.checks); });
       } else {
         setMessage(`❌ ${data.error || "Failed to check payment"}`);
       }
@@ -313,6 +358,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
           message: check.message,
         });
         setMessage(check.status === "FOUND" ? `✅ ${check.message}` : check.status === "ERROR" ? `⚠️ ${check.message}` : `❌ ${check.message}`);
+        fetch(`/api/payment/my-checks?userId=${user.id}&limit=200`).then((r) => r.json()).then((d) => { if (d.ok && Array.isArray(d.checks)) setMyChecks(d.checks); });
       } else {
         setMessage(`❌ ${data.error || "Failed to check e-Visa"}`);
       }
@@ -501,20 +547,23 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
           <section className="checker-menu">
             <p className="checker-menu-subtitle">Choose an option</p>
             <div className="checker-menu-buttons">
-              <button type="button" className="checker-menu-btn checker-menu-btn-1" onClick={() => setCurrentView("payment")}>
+              <button type="button" className="checker-menu-btn checker-menu-btn-1 checker-card-anim" onClick={() => setCurrentView("payment")}>
                 <span className="checker-menu-icon">💳</span>
                 <span className="checker-menu-btn-label">Check Payment</span>
                 <span className="checker-menu-btn-desc">View receipt</span>
+                <span className="checker-menu-today">{paymentToday} today</span>
               </button>
-              <button type="button" className="checker-menu-btn checker-menu-btn-2" onClick={() => setCurrentView("evisa")}>
+              <button type="button" className="checker-menu-btn checker-menu-btn-2 checker-card-anim checker-card-delay-1" onClick={() => setCurrentView("evisa")}>
                 <span className="checker-menu-icon">📄</span>
                 <span className="checker-menu-btn-label">Check Visa</span>
                 <span className="checker-menu-btn-desc">Download e-Visa</span>
+                <span className="checker-menu-today">{evisaToday} today</span>
               </button>
-              <button type="button" className="checker-menu-btn checker-menu-btn-3" onClick={() => { setScanError(""); setCameraError(""); setCurrentView("scan"); }}>
+              <button type="button" className="checker-menu-btn checker-menu-btn-3 checker-card-anim checker-card-delay-2" onClick={() => { setScanError(""); setCameraError(""); setCurrentView("scan"); }}>
                 <span className="checker-menu-icon">📷</span>
                 <span className="checker-menu-btn-label">Scan me</span>
                 <span className="checker-menu-btn-desc">Scan QR code</span>
+                <span className="checker-menu-today">{totalToday} total today</span>
               </button>
             </div>
             <input
@@ -803,6 +852,27 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
         @keyframes checkerShine {
           to { background-position: 200% center; }
         }
+        @keyframes checkerFloat {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+        @keyframes checkerCardIn {
+          from { opacity: 0; transform: translateY(20px) scale(0.96); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .checker-card-anim { animation: checkerCardIn 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) forwards; }
+        .checker-card-delay-1 { animation-delay: 0.08s; opacity: 0; }
+        .checker-card-delay-2 { animation-delay: 0.16s; opacity: 0; }
+        .checker-menu-today {
+          display: inline-block;
+          margin-top: 6px;
+          padding: 4px 10px;
+          border-radius: 999px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          background: rgba(255, 255, 255, 0.25);
+          color: rgba(255, 255, 255, 0.95);
+        }
         .checker-page {
           min-height: 100vh;
           min-height: 100dvh;
@@ -982,12 +1052,15 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
           align-items: center;
           gap: 8px;
           text-align: center;
-          transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.2s;
-          min-height: 120px;
+          transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1), box-shadow 0.3s ease, opacity 0.2s;
+          min-height: 128px;
         }
         .checker-menu-btn:hover {
-          transform: translateY(-4px);
-          opacity: 0.96;
+          transform: translateY(-6px) scale(1.02);
+          opacity: 0.98;
+        }
+        .checker-menu-btn:active {
+          transform: translateY(-2px);
         }
         .checker-menu-btn:active {
           transform: translateY(-1px);
@@ -996,28 +1069,25 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
           background: linear-gradient(145deg, #0f766e, #0d9488);
           color: #fff;
           box-shadow: 0 8px 24px rgba(15, 118, 110, 0.35);
-          animation: checkerFadeUp 0.5s ease-out 0.05s both;
         }
         .checker-menu-btn-1:hover {
-          box-shadow: 0 14px 32px rgba(15, 118, 110, 0.4);
+          box-shadow: 0 16px 36px rgba(15, 118, 110, 0.45);
         }
         .checker-menu-btn-2 {
           background: linear-gradient(145deg, #0369a1, #0284c7);
           color: #fff;
           box-shadow: 0 8px 24px rgba(3, 105, 161, 0.35);
-          animation: checkerFadeUp 0.5s ease-out 0.1s both;
         }
         .checker-menu-btn-2:hover {
-          box-shadow: 0 14px 32px rgba(3, 105, 161, 0.4);
+          box-shadow: 0 16px 36px rgba(3, 105, 161, 0.45);
         }
         .checker-menu-btn-3 {
           background: linear-gradient(145deg, #b45309, #d97706);
           color: #fff;
           box-shadow: 0 8px 24px rgba(180, 83, 9, 0.35);
-          animation: checkerFadeUp 0.5s ease-out 0.15s both;
         }
         .checker-menu-btn-3:hover {
-          box-shadow: 0 14px 32px rgba(180, 83, 9, 0.4);
+          box-shadow: 0 16px 36px rgba(180, 83, 9, 0.45);
         }
         .checker-menu-icon {
           width: 52px;
@@ -1391,17 +1461,15 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
         .checker-fake-alert-btn:hover {
           background: #b91c1c;
         }
+        @media (max-width: 480px) {
+          .checker-menu-buttons { gap: 12px; }
+          .checker-menu-btn { min-height: 118px; }
+          .checker-menu-today { font-size: 0.7rem; padding: 3px 8px; }
+        }
         @media (max-width: 380px) {
-          .checker-page {
-            padding: 10px;
-          }
-          .checker-main {
-            padding: 16px 14px;
-            border-radius: 20px;
-          }
-          .checker-menu-btn {
-            min-height: 110px;
-          }
+          .checker-page { padding: 10px; }
+          .checker-main { padding: 16px 14px; border-radius: 20px; }
+          .checker-menu-btn { min-height: 110px; }
         }
       `}</style>
     </div>

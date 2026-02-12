@@ -21,6 +21,18 @@ function getMogadishuTimeString() {
 const VISA_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const VISA_YEARS = ["2025", "2026", "2027"];
 
+// Somali instructions (audio / text-to-speech)
+const SOMALI_INSTRUCTIONS: Record<OfficerTabId, string> = {
+  "check-visa":
+    "Boggan waa baarida fiisaha. Geli lambarka baasaboorka iyo lambarka tixraaca. Ka dib riix baar si aad u hesho fiisaha.",
+  "check-payment":
+    "Boggan waa baarida lacag bixinta. Geli lambarka siraaha rasiidka. Riix baar si aad u aragto rasiidka.",
+  "scan-me":
+    "Boggan waa skanerka QR. Tuur kaamera QR code ka rasiidka ama fiisaha. Kaliya QR ka immigration dot etas dot gov dot so ayaa loo aqbalay.",
+  "my-shifts":
+    "Halkan waxaad ka aragtaa shiftkaaga berri. Dooro aroorta ama galabta haddii la furo.",
+};
+
 export default function OfficerPage() {
   const router = useRouter();
   const [user, setUser] = useState<any | null>(null);
@@ -38,6 +50,8 @@ export default function OfficerPage() {
   const [currentTime, setCurrentTime] = useState("--:-- --");
   const [showProfile, setShowProfile] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [soundPlaying, setSoundPlaying] = useState(false);
+  const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   // Check Visa form
   const [passportNumber, setPassportNumber] = useState("");
@@ -179,6 +193,31 @@ export default function OfficerPage() {
 
   const logout = () => { localStorage.removeItem("currentUser"); router.push("/"); };
 
+  const playSomaliInstructions = () => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const text = SOMALI_INSTRUCTIONS[activeTab] || SOMALI_INSTRUCTIONS["my-shifts"];
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "so-SO";
+    u.rate = 0.85;
+    u.onstart = () => setSoundPlaying(true);
+    u.onend = () => setSoundPlaying(false);
+    u.onerror = () => setSoundPlaying(false);
+    speechSynthRef.current = u;
+    window.speechSynthesis.speak(u);
+  };
+
+  const stopSomaliInstructions = () => {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setSoundPlaying(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => { stopSomaliInstructions(); };
+  }, []);
+
   if (!user) {
     return (
       <div className="officer-page officer-loading">
@@ -206,6 +245,15 @@ export default function OfficerPage() {
           </div>
         </div>
         <div className="officer-header-actions">
+          <button
+            type="button"
+            className={`officer-btn-icon officer-btn-sound ${soundPlaying ? "active" : ""}`}
+            onClick={soundPlaying ? stopSomaliInstructions : playSomaliInstructions}
+            aria-label={soundPlaying ? "Stop Somali instructions" : "Play Somali instructions"}
+            title={soundPlaying ? "Stop instructions" : "Play instructions in Somali"}
+          >
+            {soundPlaying ? "⏹" : "🔊"}
+          </button>
           <button type="button" className="officer-btn-icon" onClick={() => setShowProfile(true)} aria-label="Profile">👤</button>
           <button type="button" className="officer-btn-icon officer-btn-logout" onClick={logout} aria-label="Logout">🚪</button>
         </div>
@@ -251,7 +299,7 @@ export default function OfficerPage() {
                   placeholder="e.g. NXBRJ51J6"
                   required
                 />
-              </div>
+            </div>
               <div className="officer-field">
                 <label className="officer-label">Reference number</label>
                 <input
@@ -271,14 +319,14 @@ export default function OfficerPage() {
                   <select className="officer-input" value={visaMonth} onChange={(e) => setVisaMonth(e.target.value)}>
                     {VISA_MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
                   </select>
-                </div>
+            </div>
                 <div className="officer-field">
                   <label className="officer-label">Year</label>
                   <select className="officer-input" value={visaYear} onChange={(e) => setVisaYear(e.target.value)}>
                     {VISA_YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
                   </select>
-                </div>
-              </div>
+            </div>
+          </div>
               <button type="submit" className="officer-btn-primary" disabled={loading}>
                 {loading ? "Checking…" : "🔍 Check Visa"}
               </button>
@@ -303,7 +351,7 @@ export default function OfficerPage() {
                   pattern="[0-9]*"
                   required
                 />
-              </div>
+        </div>
               <button type="submit" className="officer-btn-primary" disabled={loading}>
                 {loading ? "Checking…" : "🔍 Check Payment"}
               </button>
@@ -317,7 +365,7 @@ export default function OfficerPage() {
               <h2 className="officer-scan-section-title">📷 Scan Me</h2>
               <p className="officer-scan-section-sub">Etas QR scanner — verify e-Visa at the counter</p>
             </div>
-            <OfficerScanView />
+            <OfficerScanView userId={user?.id} />
           </section>
         )}
 
@@ -325,15 +373,15 @@ export default function OfficerPage() {
           <>
             <section className="officer-card officer-hero officer-anim-in">
               <div className="officer-hero-label">📅 Tomorrow • {tomorrow}</div>
-              {assigned ? (
+          {assigned ? (
                 <div className={`officer-shift-badge ${assigned.type.toLowerCase()}`}>
                   <span className="officer-shift-emoji">
-                    {assigned.type === "MORNING" ? "🌅" : assigned.type === "AFTERNOON" ? "🌇" : assigned.type === "FULLTIME" ? "⏰" : "🏠"}
-                  </span>
+                {assigned.type === "MORNING" ? "🌅" : assigned.type === "AFTERNOON" ? "🌇" : assigned.type === "FULLTIME" ? "⏰" : "🏠"}
+              </span>
                   <span className="officer-shift-text">{assigned.type}</span>
                   <span className="officer-shift-hint">Your assigned shift</span>
-                </div>
-              ) : canChoose ? (
+            </div>
+          ) : canChoose ? (
                 <div className="officer-choose">
                   <p className="officer-choose-prompt">Choose your preferred shift:</p>
                   <div className="officer-shift-buttons">
@@ -341,22 +389,22 @@ export default function OfficerPage() {
                       <span className="officer-shift-btn-emoji">🌅</span>
                       <span className="officer-shift-btn-label">Morning</span>
                       <span className="officer-shift-btn-slots">{morningLimit} slots</span>
-                    </button>
+                </button>
                     <button type="button" className="officer-shift-btn afternoon" onClick={() => choose("AFTERNOON")}>
                       <span className="officer-shift-btn-emoji">🌇</span>
                       <span className="officer-shift-btn-label">Afternoon</span>
                       <span className="officer-shift-btn-slots">{afternoonLimit} slots</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
+                </button>
+              </div>
+            </div>
+          ) : (
                 <div className="officer-waiting">
                   <span className="officer-waiting-emoji">⏳</span>
                   <span className="officer-waiting-text">Choices closed</span>
                   <span className="officer-waiting-hint">{choiceReason === "cutoff-passed" ? "Deadline passed. Await schedule." : "Schedule is being generated."}</span>
-                </div>
-              )}
-            </section>
+            </div>
+          )}
+        </section>
 
             <section className="officer-card officer-stats officer-anim-in officer-anim-delay-1">
               <h2 className="officer-stats-title">📊 My shift stats</h2>
@@ -365,26 +413,26 @@ export default function OfficerPage() {
                 <div className="officer-stat afternoon"><span className="officer-stat-emoji">🌇</span><span className="officer-stat-value">{shiftStats.afternoon}</span><span className="officer-stat-label">Afternoon</span></div>
                 <div className="officer-stat fulltime"><span className="officer-stat-emoji">⏰</span><span className="officer-stat-value">{shiftStats.fulltime}</span><span className="officer-stat-label">Full-time</span></div>
                 <div className="officer-stat dayoff"><span className="officer-stat-emoji">🏠</span><span className="officer-stat-value">{shiftStats.dayoff}</span><span className="officer-stat-label">Days off</span></div>
-              </div>
-            </section>
+          </div>
+        </section>
 
             <section className="officer-card officer-history officer-anim-in officer-anim-delay-2">
               <h2 className="officer-history-title">📋 Recent shifts</h2>
               <div className="officer-history-list">
-                {history.length === 0 ? (
+            {history.length === 0 ? (
                   <div className="officer-history-empty">No shifts recorded yet</div>
-                ) : (
-                  history.slice(0, 10).map((s) => (
+            ) : (
+              history.slice(0, 10).map((s) => (
                     <div key={s.id} className="officer-history-item">
                       <span className="officer-history-date">{String(s.date).slice(0, 10)}</span>
                       <span className={`officer-history-badge ${s.type.toLowerCase()}`}>
-                        {s.type === "MORNING" ? "🌅" : s.type === "AFTERNOON" ? "🌇" : s.type === "FULLTIME" ? "⏰" : "🏠"} {s.type}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
+                    {s.type === "MORNING" ? "🌅" : s.type === "AFTERNOON" ? "🌇" : s.type === "FULLTIME" ? "⏰" : "🏠"} {s.type}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
           </>
         )}
 
@@ -414,13 +462,16 @@ export default function OfficerPage() {
 
       <style jsx>{`
         @keyframes officer-spin { to { transform: rotate(360deg); } }
-        @keyframes officer-fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes officer-fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes officer-fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes officer-scaleIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+        @keyframes officer-scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
         @keyframes officer-slideDown { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
-        @keyframes officer-bgShift { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
+        @keyframes officer-bgShift { 0%, 100% { opacity: 1; } 50% { opacity: 0.88; } }
         @keyframes officer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
         @keyframes officer-glow { 0%, 100% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.15); } 50% { box-shadow: 0 0 28px rgba(56, 189, 248, 0.25); } }
+        @keyframes officer-slideIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes officer-cardPop { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes officer-tabSlide { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 
         .officer-page { position: relative; min-height: 100vh; color: #e2e8f0; overflow-x: hidden; }
         .officer-bg { position: fixed; inset: 0; background: linear-gradient(165deg, #0f172a 0%, #1e3a5f 40%, #0c4a6e 70%, #0f172a 100%); background-size: 200% 200%; animation: officer-bgShift 12s ease-in-out infinite; z-index: 0; }
@@ -444,33 +495,36 @@ export default function OfficerPage() {
         .officer-btn-icon:active { transform: scale(0.98); }
         .officer-btn-logout { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.2); }
         .officer-btn-logout:hover { background: rgba(239,68,68,0.25); }
+        .officer-btn-sound { font-size: 1.2rem; }
+        .officer-btn-sound.active { background: rgba(56,189,248,0.2); border-color: rgba(56,189,248,0.4); color: #7dd3fc; }
 
         .officer-toast { position: fixed; top: 92px; left: 50%; transform: translateX(-50%); padding: 18px 32px; background: rgba(30, 41, 59, 0.96); backdrop-filter: blur(14px); color: white; border-radius: 18px; box-shadow: 0 16px 48px rgba(0,0,0,0.4); z-index: 100; cursor: pointer; font-size: 15px; max-width: 90vw; border: 1px solid rgba(255,255,255,0.1); animation: officer-slideDown 0.35s ease-out; }
 
-        .officer-tabs { position: relative; z-index: 5; padding: 16px 20px; background: rgba(15,23,42,0.45); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.07); overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .officer-tabs-inner { display: flex; gap: 10px; min-width: min-content; }
-        .officer-tab { display: flex; align-items: center; gap: 12px; padding: 16px 22px; border-radius: 16px; border: 1px solid transparent; background: rgba(255,255,255,0.06); color: #94a3b8; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; }
-        .officer-tab:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; transform: translateY(-2px); }
-        .officer-tab.active { background: linear-gradient(135deg, rgba(56,189,248,0.2), rgba(99,102,241,0.12)); color: #7dd3fc; border-color: rgba(56,189,248,0.35); box-shadow: 0 4px 20px rgba(56,189,248,0.15); }
-        .officer-tab.active:hover { background: linear-gradient(135deg, rgba(56,189,248,0.26), rgba(99,102,241,0.16)); box-shadow: 0 6px 24px rgba(56,189,248,0.2); }
-        .officer-tab-icon { font-size: 1.2rem; transition: transform 0.25s; }
-        .officer-tab.active .officer-tab-icon { transform: scale(1.12); }
+        .officer-tabs { position: relative; z-index: 5; padding: clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px); background: rgba(15,23,42,0.5); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,0.08); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+        .officer-tabs-inner { display: flex; gap: 12px; min-width: min-content; padding: 4px 0; }
+        .officer-tab { display: flex; align-items: center; gap: 12px; padding: clamp(14px, 3vw, 18px) clamp(18px, 4vw, 24px); border-radius: 18px; border: 1px solid transparent; background: rgba(255,255,255,0.06); color: #94a3b8; font-size: clamp(14px, 2.5vw, 15px); font-weight: 600; cursor: pointer; transition: all 0.35s cubic-bezier(0.34, 1.2, 0.64, 1); white-space: nowrap; }
+        .officer-tab:hover { background: rgba(255,255,255,0.12); color: #e2e8f0; transform: translateY(-3px); }
+        .officer-tab.active { background: linear-gradient(135deg, rgba(56,189,248,0.22), rgba(99,102,241,0.14)); color: #7dd3fc; border-color: rgba(56,189,248,0.4); box-shadow: 0 6px 24px rgba(56,189,248,0.2); }
+        .officer-tab.active:hover { background: linear-gradient(135deg, rgba(56,189,248,0.28), rgba(99,102,241,0.18)); box-shadow: 0 8px 28px rgba(56,189,248,0.25); }
+        .officer-tab-icon { font-size: 1.25rem; transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1); }
+        .officer-tab.active .officer-tab-icon { transform: scale(1.15); }
 
-        .officer-main { position: relative; z-index: 1; padding: 26px 20px 140px; max-width: 560px; margin: 0 auto; }
-        .officer-anim-in { animation: officer-fadeUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-        .officer-anim-delay-1 { animation-delay: 0.08s; opacity: 0; }
-        .officer-anim-delay-2 { animation-delay: 0.16s; opacity: 0; }
-        .officer-card { background: rgba(255,255,255,0.06); backdrop-filter: blur(14px); border-radius: 24px; padding: 28px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.08); transition: transform 0.25s ease, box-shadow 0.25s ease; }
-        .officer-card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,0.22); }
+        .officer-main { position: relative; z-index: 1; padding: clamp(16px, 4vw, 26px) clamp(16px, 4vw, 24px) 140px; max-width: 580px; margin: 0 auto; }
+        .officer-anim-in { animation: officer-cardPop 0.55s cubic-bezier(0.34, 1.2, 0.64, 1) forwards; }
+        .officer-anim-delay-1 { animation-delay: 0.1s; opacity: 0; }
+        .officer-anim-delay-2 { animation-delay: 0.2s; opacity: 0; }
+        .officer-card { background: rgba(255,255,255,0.07); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-radius: 24px; padding: clamp(20px, 4vw, 28px); margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.1); transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1), box-shadow 0.3s ease; }
+        .officer-card:hover { transform: translateY(-4px); box-shadow: 0 20px 48px rgba(0,0,0,0.25); }
         .officer-card-title { margin: 0 0 8px; font-size: 1.3rem; font-weight: 700; color: white; letter-spacing: -0.03em; }
         .officer-card-sub { margin: 0 0 24px; font-size: 14px; color: #94a3b8; line-height: 1.5; }
         .officer-form { display: flex; flex-direction: column; gap: 22px; }
         .officer-field { display: flex; flex-direction: column; gap: 10px; }
         .officer-label { font-size: 14px; font-weight: 600; color: #cbd5e1; }
-        .officer-input { padding: 18px 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); background: rgba(15,23,42,0.55); color: white; font-size: 16px; transition: border-color 0.2s, box-shadow 0.2s; }
+        .officer-input { padding: clamp(14px, 3vw, 18px) clamp(16px, 4vw, 20px); border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); background: rgba(15,23,42,0.55); color: white; font-size: clamp(15px, 2.5vw, 16px); transition: border-color 0.2s, box-shadow 0.2s; }
         .officer-input:focus { outline: none; border-color: rgba(56,189,248,0.55); box-shadow: 0 0 0 3px rgba(56,189,248,0.18); }
         .officer-input::placeholder { color: #64748b; }
         .officer-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 400px) { .officer-row { grid-template-columns: 1fr; } }
         .officer-btn-primary { padding: 20px 30px; border-radius: 18px; border: none; background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; font-size: 17px; font-weight: 700; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 6px 24px rgba(14, 165, 233, 0.35); }
         .officer-btn-primary:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(14, 165, 233, 0.45); }
         .officer-btn-primary:active:not(:disabled) { transform: translateY(0); }
@@ -511,9 +565,9 @@ export default function OfficerPage() {
         .officer-waiting-hint { display: block; font-size: 14px; color: #a3a322; margin-top: 8px; }
 
         .officer-stats-title { margin: 0 0 18px; font-size: 1.1rem; font-weight: 700; color: rgba(255,255,255,0.95); }
-        .officer-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-        .officer-stat { background: rgba(255,255,255,0.06); border-radius: 20px; padding: 20px; text-align: center; border-left: 4px solid; transition: transform 0.25s ease, box-shadow 0.25s ease; }
-        .officer-stat:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,0.18); }
+        .officer-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+        .officer-stat { background: rgba(255,255,255,0.06); border-radius: 20px; padding: clamp(16px, 3vw, 20px); text-align: center; border-left: 4px solid; transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1), box-shadow 0.3s ease; }
+        .officer-stat:hover { transform: translateY(-4px); box-shadow: 0 14px 32px rgba(0,0,0,0.2); }
         .officer-stat.morning { border-color: #fbbf24; }
         .officer-stat.afternoon { border-color: #3b82f6; }
         .officer-stat.fulltime { border-color: #8b5cf6; }
@@ -568,10 +622,27 @@ export default function OfficerPage() {
         .officer-lock-logout { display: block; width: 100%; padding: 14px; border: none; background: transparent; color: #94a3b8; font-size: 14px; cursor: pointer; text-decoration: underline; }
         .officer-lock-logout:hover { color: #e2e8f0; }
 
+        @media (max-width: 600px) {
+          .officer-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+          .officer-stat-value { font-size: 1.5rem; }
+        }
         @media (max-width: 480px) {
-          .officer-stats-grid { grid-template-columns: repeat(2, 1fr); }
           .officer-shift-buttons { grid-template-columns: 1fr; }
-          .officer-main { padding: 18px; }
+          .officer-main { padding: 14px 12px 120px; }
+          .officer-header { padding: 14px 16px; }
+          .officer-avatar { width: 48px; height: 48px; }
+          .officer-title { font-size: 1rem; }
+          .officer-tab { padding: 12px 16px; }
+          .officer-card { padding: 18px; margin-bottom: 18px; }
+          .officer-hero-label { font-size: 13px; }
+          .officer-shift-badge { padding: 24px 20px; }
+          .officer-shift-text { font-size: 1.4rem; }
+        }
+        @media (max-width: 360px) {
+          .officer-stats-grid { gap: 10px; }
+          .officer-stat { padding: 14px; }
+          .officer-stat-emoji { font-size: 1.4rem; }
+          .officer-stat-value { font-size: 1.35rem; }
         }
       `}</style>
     </div>

@@ -50,7 +50,9 @@ const cameraStyles = `
   .officer-scan-error { margin-top: 14px; padding: 14px; border-radius: 14px; background: rgba(239, 68, 68, 0.15); color: #fca5a5; font-size: 14px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.2); }
 `;
 
-export default function OfficerScanView() {
+type OfficerScanViewProps = { userId?: string | null };
+
+export default function OfficerScanView({ userId }: OfficerScanViewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,16 +77,32 @@ export default function OfficerScanView() {
     }
   };
 
+  const logScanActivity = (result: "valid" | "fake") => {
+    if (userId) {
+      fetch("/api/audit/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          actorId: userId,
+          action: "SCAN_ME",
+          metadata: { result },
+        }),
+      }).catch(() => {});
+    }
+  };
+
   const showValid = () => {
     stopCamera();
     setScanResult("valid");
     setWrongDomainUrl("");
+    logScanActivity("valid");
   };
 
   const showFake = (url?: string) => {
     stopCamera();
     setScanResult("fake");
     if (url) setWrongDomainUrl(url);
+    logScanActivity("fake");
   };
 
   const resetScan = () => {

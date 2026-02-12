@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth";
 import { normalizePhone } from "@/lib/phone";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(req: Request) {
   try {
@@ -23,6 +24,14 @@ export async function POST(req: Request) {
     if (!user.isActive) {
       return NextResponse.json({ ok: false, error: "User inactive" }, { status: 403 });
     }
+
+    await logAudit({
+      actorId: user.id,
+      action: "LOGIN",
+      targetType: "User",
+      targetId: user.id,
+      metadata: { role: user.role },
+    });
 
     return NextResponse.json({
       ok: true,

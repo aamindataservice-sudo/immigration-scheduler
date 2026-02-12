@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logAudit } from "@/lib/audit";
 
 /**
  * Check if e-Visa PDF exists
@@ -101,7 +102,6 @@ export async function POST(req: Request) {
       status = "ERROR";
     }
 
-    // Save payment check to database
     const paymentCheck = await prisma.paymentCheck.create({
       data: {
         type: "EVISA",
@@ -113,6 +113,14 @@ export async function POST(req: Request) {
         resultUrl,
         checkedBy,
       },
+    });
+
+    await logAudit({
+      actorId: checkedBy,
+      action: "CHECK_EVISA",
+      targetType: "PaymentCheck",
+      targetId: paymentCheck.id,
+      metadata: { passportNumber, referenceNumber, status },
     });
 
     return NextResponse.json({

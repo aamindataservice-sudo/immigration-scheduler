@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logAudit } from "@/lib/audit";
 import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
@@ -85,7 +86,6 @@ export async function POST(req: Request) {
       downloadStatus = "ERROR";
     }
 
-    // Save payment check to database
     const paymentCheck = await prisma.paymentCheck.create({
       data: {
         type: "PAYMENT_RECEIPT",
@@ -94,6 +94,14 @@ export async function POST(req: Request) {
         resultUrl: localFilePath || receiptUrl,
         checkedBy,
       },
+    });
+
+    await logAudit({
+      actorId: checkedBy,
+      action: "DOWNLOAD_RECEIPT",
+      targetType: "PaymentCheck",
+      targetId: paymentCheck.id,
+      metadata: { serialNumber, status: downloadStatus },
     });
 
     return NextResponse.json({
