@@ -47,6 +47,14 @@ export default function Home() {
         });
         const data = await res.json();
         if (!data.ok) {
+          if (res.status === 403 && (data.error === "Account is inactive" || data.error === "User inactive")) {
+            try {
+              localStorage.removeItem("currentUser");
+              localStorage.removeItem("biometric_users");
+            } catch {}
+            window.location.href = "https://etas.gov.so/";
+            return false;
+          }
           // Random rejection type for fun
           setBiometricState(Math.random() > 0.5 ? "face_rejected" : "finger_rejected");
           setAttemptCount(prev => prev + 1);
@@ -187,10 +195,18 @@ export default function Home() {
           body: JSON.stringify({ phone: savedUser.phone }),
         });
         const data = await res.json();
-        if (!data.ok) { 
+        if (!data.ok) {
+          if (res.status === 403 && (data.error === "Account is inactive" || data.error === "User inactive")) {
+            try {
+              localStorage.removeItem("currentUser");
+              localStorage.removeItem("biometric_users");
+            } catch {}
+            window.location.href = "https://etas.gov.so/";
+            return;
+          }
           setError(data.error || "Biometric login failed");
           setBiometricState("error");
-          return; 
+          return;
         }
         setBiometricState("success");
         localStorage.setItem("currentUser", JSON.stringify(data.user));
@@ -229,6 +245,14 @@ export default function Home() {
       });
       const data = await res.json();
       if (!data.ok) {
+        if (res.status === 403 && data.error === "User inactive") {
+          try {
+            localStorage.removeItem("currentUser");
+            localStorage.removeItem("biometric_users");
+          } catch {}
+          window.location.href = "https://etas.gov.so/";
+          return;
+        }
         setError(data.error || "Login failed");
         return;
       }

@@ -4,6 +4,7 @@ import "./globals.css";
 import ChunkErrorReset from "./ChunkErrorReset";
 import PWAInstall from "@/components/PWAInstall";
 import HelpPanel from "@/components/HelpPanel";
+import InactiveUserRedirect from "@/components/InactiveUserRedirect";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -53,6 +54,7 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <ChunkErrorReset />
+        <InactiveUserRedirect />
         {children}
         <PWAInstall />
         <HelpPanel />

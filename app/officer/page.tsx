@@ -48,6 +48,7 @@ export default function OfficerPage() {
   const [morningLimit, setMorningLimit] = useState(0);
   const [afternoonLimit, setAfternoonLimit] = useState(0);
   const [currentTime, setCurrentTime] = useState("--:-- --");
+  const [profileOpen, setProfileOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [loading, setLoading] = useState(false);
   const [soundPlaying, setSoundPlaying] = useState(false);
@@ -232,19 +233,15 @@ export default function OfficerPage() {
 
   return (
     <div className="officer-page">
-      <div className="officer-bg" aria-hidden />
-
       <header className="officer-header">
-        <div className="officer-header-left">
-          <div className="officer-avatar">
-            <span className="officer-avatar-inner">{user?.fullName?.charAt(0)?.toUpperCase() || "?"}</span>
-          </div>
-          <div className="officer-header-info">
-            <h1 className="officer-title">{user?.fullName}</h1>
-            <span className="officer-time">{currentTime}</span>
+        <div className="officer-brand">
+          <img src="/logo.svg" alt="" className="officer-logo-img" aria-hidden />
+          <div className="officer-header-inner">
+            <h1 className="officer-title">International Arrival</h1>
+            <span className="officer-subtitle">Officer — Visa & shifts</span>
           </div>
         </div>
-        <div className="officer-header-actions">
+        <div className="officer-header-right">
           <button
             type="button"
             className={`officer-btn-icon officer-btn-sound ${soundPlaying ? "active" : ""}`}
@@ -254,8 +251,38 @@ export default function OfficerPage() {
           >
             {soundPlaying ? "⏹" : "🔊"}
           </button>
-          <button type="button" className="officer-btn-icon" onClick={() => setShowProfile(true)} aria-label="Profile">👤</button>
-          <button type="button" className="officer-btn-icon officer-btn-logout" onClick={logout} aria-label="Logout">🚪</button>
+          <div className="officer-profile-wrap">
+            <button
+              type="button"
+              className="officer-profile-btn"
+              onClick={() => setProfileOpen((o) => !o)}
+              aria-expanded={profileOpen}
+              aria-haspopup="true"
+              aria-label="Profile menu"
+            >
+              <span className="officer-profile-avatar">{(user?.fullName || "?").charAt(0).toUpperCase()}</span>
+            </button>
+            {profileOpen && (
+              <>
+                <div className="officer-profile-backdrop" onClick={() => setProfileOpen(false)} aria-hidden />
+                <div className="officer-profile-dropdown">
+                  <div className="officer-profile-head">
+                    <span className="officer-profile-name">{user?.fullName || "User"}</span>
+                    <span className="officer-profile-role">Officer · {currentTime}</span>
+                  </div>
+                  <button type="button" className="officer-profile-item" onClick={() => { setProfileOpen(false); setShowProfile(true); }}>
+                    Profile
+                  </button>
+                  <a href="/change-password" className="officer-profile-item" onClick={() => setProfileOpen(false)}>
+                    Change password
+                  </a>
+                  <button type="button" className="officer-profile-item officer-profile-logout" onClick={() => { setProfileOpen(false); logout(); }}>
+                    Log out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -264,6 +291,11 @@ export default function OfficerPage() {
           {message}
         </div>
       )}
+
+      <main className="officer-main">
+        <div className="officer-welcome-banner">
+          <span className="officer-welcome-banner-text">Welcome back, <strong>{user?.fullName || "User"}</strong></span>
+        </div>
 
       {tabs.length > 1 && (
         <nav className="officer-tabs" aria-label="Dashboard sections">
@@ -283,7 +315,6 @@ export default function OfficerPage() {
         </nav>
       )}
 
-      <main className="officer-main">
         {activeTab === "check-visa" && (
           <section className="officer-card officer-section officer-anim-in">
             <h2 className="officer-card-title">📄 Check Visa</h2>
@@ -466,161 +497,190 @@ export default function OfficerPage() {
         @keyframes officer-fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes officer-scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
         @keyframes officer-slideDown { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
-        @keyframes officer-bgShift { 0%, 100% { opacity: 1; } 50% { opacity: 0.88; } }
-        @keyframes officer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        @keyframes officer-glow { 0%, 100% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.15); } 50% { box-shadow: 0 0 28px rgba(56, 189, 248, 0.25); } }
-        @keyframes officer-slideIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes officer-cardPop { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        @keyframes officer-tabSlide { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes officer-bgShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        @keyframes officer-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.85; transform: scale(1.02); } }
+        @keyframes officer-glow { 0%, 100% { box-shadow: 0 0 24px rgba(87, 255, 143, 0.4); } 50% { box-shadow: 0 0 32px rgba(87, 255, 143, 0.6); } }
+        @keyframes officer-slideIn { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes officer-cardPop { from { opacity: 0; transform: translateY(28px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes officer-tabSlide { from { opacity: 0; transform: translateY(-8px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes officer-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+        @keyframes officer-shine { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        @keyframes officer-emojiPop { 0% { transform: scale(0.8); opacity: 0; } 60% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes officer-contentIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-        .officer-page { position: relative; min-height: 100vh; color: #e2e8f0; overflow-x: hidden; }
-        .officer-bg { position: fixed; inset: 0; background: linear-gradient(165deg, #0f172a 0%, #1e3a5f 40%, #0c4a6e 70%, #0f172a 100%); background-size: 200% 200%; animation: officer-bgShift 12s ease-in-out infinite; z-index: 0; }
-        .officer-loading { position: relative; display: flex; align-items: center; justify-content: center; min-height: 100vh; z-index: 1; }
-        .officer-loading-bg { position: absolute; inset: 0; background: linear-gradient(165deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%); }
-        .officer-loading-card { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 32px 48px; background: rgba(255,255,255,0.06); border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); animation: officer-scaleIn 0.4s ease-out; }
-        .loading-spinner { width: 44px; height: 44px; border: 3px solid rgba(255,255,255,0.12); border-top-color: #38bdf8; border-radius: 50%; animation: officer-spin 0.7s linear infinite; }
-        .officer-loading-text { font-size: 15px; color: #94a3b8; font-weight: 500; }
+        .officer-page { position: relative; min-height: 100vh; min-height: 100dvh; width: 100%; max-width: 100vw; overflow-x: hidden; box-sizing: border-box; padding: clamp(8px, 3vw, 24px); padding-bottom: clamp(20px, 6vw, 48px); background: #f0f4f8; -webkit-overflow-scrolling: touch; color: #16364d; }
+        .officer-loading { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .officer-loading-bg { position: absolute; inset: 0; background: #16364d; }
+        .officer-loading-card { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 32px 48px; background: #16364d; border-radius: 24px; border: 2px solid rgba(87, 255, 143, 0.3); box-shadow: 0 16px 48px rgba(0,0,0,0.2); animation: officer-scaleIn 0.5s cubic-bezier(0.34, 1.2, 0.64, 1); }
+        .loading-spinner { width: 44px; height: 44px; border: 3px solid rgba(87, 255, 143, 0.2); border-top-color: #57ff8f; border-radius: 50%; animation: officer-spin 0.7s linear infinite; }
+        .officer-loading-text { font-size: 15px; color: #57ff8f; font-weight: 500; }
 
-        .officer-header { position: relative; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; background: rgba(15,23,42,0.82); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.08); }
-        .officer-header-left { display: flex; align-items: center; gap: 16px; }
-        .officer-avatar { width: 56px; height: 56px; border-radius: 18px; background: linear-gradient(145deg, #0ea5e9 0%, #6366f1 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 24px rgba(14, 165, 233, 0.4); transition: transform 0.2s, box-shadow 0.2s; }
-        .officer-avatar:hover { transform: scale(1.04); box-shadow: 0 8px 28px rgba(14, 165, 233, 0.5); }
-        .officer-avatar-inner { font-weight: 700; font-size: 1.4rem; color: white; }
-        .officer-header-info { display: flex; flex-direction: column; gap: 6px; }
-        .officer-title { margin: 0; font-size: 1.15rem; font-weight: 700; color: white; letter-spacing: -0.03em; }
-        .officer-time { font-size: 13px; color: #94a3b8; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
-        .officer-header-actions { display: flex; gap: 12px; }
-        .officer-btn-icon { width: 48px; height: 48px; border-radius: 16px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.06); font-size: 1.3rem; cursor: pointer; transition: all 0.25s ease; }
-        .officer-btn-icon:hover { background: rgba(255,255,255,0.14); transform: scale(1.06); }
-        .officer-btn-icon:active { transform: scale(0.98); }
-        .officer-btn-logout { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.2); }
-        .officer-btn-logout:hover { background: rgba(239,68,68,0.25); }
+        .officer-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: clamp(16px, 4vw, 24px); padding: 14px 18px; background: #16364d; border-radius: 20px; border: 2px solid rgba(87, 255, 143, 0.25); box-shadow: 0 8px 24px rgba(22, 54, 77, 0.4); animation: officer-fadeUp 0.5s cubic-bezier(0.34, 1.2, 0.64, 1); }
+        .officer-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .officer-logo-img { width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; object-fit: contain; transition: transform 0.3s ease; filter: brightness(1.1); }
+        .officer-brand:hover .officer-logo-img { transform: scale(1.05) rotate(-3deg); }
+        .officer-header-inner { min-width: 0; }
+        .officer-title { margin: 0; font-size: clamp(1.25rem, 4.5vw, 1.6rem); font-weight: 700; color: #57ff8f; letter-spacing: -0.02em; }
+        .officer-subtitle { display: block; margin-top: 2px; font-size: clamp(0.8rem, 2.5vw, 0.9rem); color: rgba(87, 255, 143, 0.9); }
+        .officer-header-right { display: flex; align-items: center; gap: 10px; }
+        .officer-btn-icon { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(87, 255, 143, 0.5); background: #57ff8f; color: #16364d; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s cubic-bezier(0.34, 1.2, 0.64, 1); -webkit-tap-highlight-color: transparent; box-shadow: 0 4px 14px rgba(87, 255, 143, 0.4); }
+        .officer-btn-icon:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(87, 255, 143, 0.5); background: #6bff9e; }
+        .officer-btn-icon:active { transform: scale(0.95); transition-duration: 0.1s; }
         .officer-btn-sound { font-size: 1.2rem; }
-        .officer-btn-sound.active { background: rgba(56,189,248,0.2); border-color: rgba(56,189,248,0.4); color: #7dd3fc; }
+        .officer-btn-sound.active { background: #57ff8f; color: #16364d; box-shadow: 0 0 20px rgba(87, 255, 143, 0.5); animation: officer-glow 2s ease-in-out infinite; }
+        .officer-profile-wrap { position: relative; }
+        .officer-profile-btn { width: 44px; height: 44px; border-radius: 50%; border: 2px solid #57ff8f; background: #16364d; color: #57ff8f; font-size: 1.1rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s cubic-bezier(0.34, 1.2, 0.64, 1); -webkit-tap-highlight-color: transparent; box-shadow: 0 4px 14px rgba(87, 255, 143, 0.2); }
+        .officer-profile-btn:hover { transform: scale(1.08); background: rgba(87, 255, 143, 0.15); box-shadow: 0 6px 20px rgba(87, 255, 143, 0.3); }
+        .officer-profile-avatar { line-height: 1; }
+        .officer-profile-backdrop { position: fixed; inset: 0; z-index: 98; background: transparent; }
+        .officer-profile-dropdown { position: absolute; top: calc(100% + 8px); right: 0; min-width: 200px; background: #16364d; border-radius: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.3); border: 2px solid rgba(87, 255, 143, 0.3); z-index: 99; overflow: hidden; animation: officer-dropdownIn 0.25s cubic-bezier(0.34, 1.2, 0.64, 1); }
+        @keyframes officer-dropdownIn { from { opacity: 0; transform: translateY(-10px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .officer-profile-head { padding: 14px 16px; border-bottom: 1px solid rgba(87, 255, 143, 0.2); }
+        .officer-profile-name { display: block; font-size: 0.95rem; font-weight: 700; color: #57ff8f; }
+        .officer-profile-role { display: block; font-size: 0.75rem; color: rgba(87, 255, 143, 0.85); margin-top: 2px; }
+        .officer-profile-item { display: block; width: 100%; padding: 12px 16px; text-align: left; font-size: 0.9rem; font-weight: 500; color: rgba(255,255,255,0.9); text-decoration: none; border: none; background: none; cursor: pointer; transition: all 0.2s; }
+        .officer-profile-item:hover { background: rgba(87, 255, 143, 0.15); color: #57ff8f; }
+        .officer-profile-logout { color: #ff6b6b; }
+        .officer-profile-logout:hover { background: rgba(255, 107, 107, 0.15); color: #ff8787; }
 
-        .officer-toast { position: fixed; top: 92px; left: 50%; transform: translateX(-50%); padding: 18px 32px; background: rgba(30, 41, 59, 0.96); backdrop-filter: blur(14px); color: white; border-radius: 18px; box-shadow: 0 16px 48px rgba(0,0,0,0.4); z-index: 100; cursor: pointer; font-size: 15px; max-width: 90vw; border: 1px solid rgba(255,255,255,0.1); animation: officer-slideDown 0.35s ease-out; }
+        .officer-toast { position: fixed; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); padding: 12px 20px; background: #16364d; color: #57ff8f; border-radius: 14px; font-size: 0.9rem; max-width: min(90vw, 360px); z-index: 100; cursor: pointer; box-shadow: 0 10px 40px rgba(0,0,0,0.3); border: 2px solid rgba(87, 255, 143, 0.3); animation: officer-slideDown 0.4s cubic-bezier(0.34, 1.2, 0.64, 1); }
 
-        .officer-tabs { position: relative; z-index: 5; padding: clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px); background: rgba(15,23,42,0.5); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,0.08); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
-        .officer-tabs-inner { display: flex; gap: 12px; min-width: min-content; padding: 4px 0; }
-        .officer-tab { display: flex; align-items: center; gap: 12px; padding: clamp(14px, 3vw, 18px) clamp(18px, 4vw, 24px); border-radius: 18px; border: 1px solid transparent; background: rgba(255,255,255,0.06); color: #94a3b8; font-size: clamp(14px, 2.5vw, 15px); font-weight: 600; cursor: pointer; transition: all 0.35s cubic-bezier(0.34, 1.2, 0.64, 1); white-space: nowrap; }
-        .officer-tab:hover { background: rgba(255,255,255,0.12); color: #e2e8f0; transform: translateY(-3px); }
-        .officer-tab.active { background: linear-gradient(135deg, rgba(56,189,248,0.22), rgba(99,102,241,0.14)); color: #7dd3fc; border-color: rgba(56,189,248,0.4); box-shadow: 0 6px 24px rgba(56,189,248,0.2); }
-        .officer-tab.active:hover { background: linear-gradient(135deg, rgba(56,189,248,0.28), rgba(99,102,241,0.18)); box-shadow: 0 8px 28px rgba(56,189,248,0.25); }
-        .officer-tab-icon { font-size: 1.25rem; transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1); }
-        .officer-tab.active .officer-tab-icon { transform: scale(1.15); }
+        .officer-main { width: 100%; max-width: min(560px, calc(100vw - 20px)); margin: 0 auto; box-sizing: border-box; background: #fff; border-radius: 28px; padding: clamp(18px, 4vw, 28px); padding-bottom: 140px; border: 2px solid rgba(22, 54, 77, 0.15); box-shadow: 0 12px 40px rgba(22, 54, 77, 0.12); animation: officer-mainIn 0.6s cubic-bezier(0.34, 1.2, 0.64, 1); }
+        @keyframes officer-mainIn { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .officer-welcome-banner { padding: 16px 20px; margin-bottom: 22px; border-radius: 18px; background: #16364d; border: 2px solid rgba(87, 255, 143, 0.3); box-shadow: 0 4px 20px rgba(22, 54, 77, 0.2); animation: officer-fadeUp 0.5s 0.1s cubic-bezier(0.34, 1.2, 0.64, 1) both; }
+        .officer-welcome-banner-text { font-size: 0.95rem; color: rgba(255,255,255,0.95); }
+        .officer-welcome-banner-text strong { color: #57ff8f; font-weight: 700; }
 
-        .officer-main { position: relative; z-index: 1; padding: clamp(16px, 4vw, 26px) clamp(16px, 4vw, 24px) 140px; max-width: 580px; margin: 0 auto; }
-        .officer-anim-in { animation: officer-cardPop 0.55s cubic-bezier(0.34, 1.2, 0.64, 1) forwards; }
-        .officer-anim-delay-1 { animation-delay: 0.1s; opacity: 0; }
-        .officer-anim-delay-2 { animation-delay: 0.2s; opacity: 0; }
-        .officer-card { background: rgba(255,255,255,0.07); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-radius: 24px; padding: clamp(20px, 4vw, 28px); margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.1); transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1), box-shadow 0.3s ease; }
-        .officer-card:hover { transform: translateY(-4px); box-shadow: 0 20px 48px rgba(0,0,0,0.25); }
-        .officer-card-title { margin: 0 0 8px; font-size: 1.3rem; font-weight: 700; color: white; letter-spacing: -0.03em; }
-        .officer-card-sub { margin: 0 0 24px; font-size: 14px; color: #94a3b8; line-height: 1.5; }
+        .officer-tabs { padding: clamp(12px, 3vw, 16px) 0; margin-bottom: 12px; border-bottom: 2px solid rgba(22, 54, 77, 0.12); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+        .officer-tabs-inner { display: flex; gap: 10px; min-width: min-content; flex-wrap: wrap; }
+        .officer-tab { display: flex; align-items: center; gap: 10px; padding: clamp(12px, 3vw, 14px) clamp(16px, 4vw, 20px); border-radius: 16px; border: 2px solid rgba(22, 54, 77, 0.2); background: #f0f4f8; color: #16364d; font-size: clamp(14px, 2.5vw, 15px); font-weight: 600; cursor: pointer; transition: all 0.35s cubic-bezier(0.34, 1.2, 0.64, 1); white-space: nowrap; }
+        .officer-tab:hover { background: rgba(87, 255, 143, 0.15); color: #0d2d42; transform: translateY(-2px); border-color: rgba(87, 255, 143, 0.4); }
+        .officer-tab.active { background: #57ff8f; color: #16364d; border-color: #57ff8f; box-shadow: 0 4px 16px rgba(87, 255, 143, 0.35); animation: officer-tabSlide 0.4s cubic-bezier(0.34, 1.2, 0.64, 1); }
+        .officer-tab-icon { font-size: 1.2rem; transition: transform 0.35s cubic-bezier(0.34, 1.2, 0.64, 1); }
+        .officer-tab.active .officer-tab-icon { transform: scale(1.12); animation: officer-emojiPop 0.5s ease; }
+        .officer-anim-in { animation: officer-cardPop 0.6s cubic-bezier(0.34, 1.2, 0.64, 1) forwards; }
+        .officer-anim-delay-1 { animation-delay: 0.12s; opacity: 0; }
+        .officer-anim-delay-2 { animation-delay: 0.24s; opacity: 0; }
+        .officer-card { background: linear-gradient(145deg, #fff 0%, #f8fafc 100%); border-radius: 22px; padding: clamp(20px, 4vw, 28px); margin-bottom: 24px; border: 2px solid rgba(22, 54, 77, 0.12); transition: all 0.4s cubic-bezier(0.34, 1.2, 0.64, 1); box-shadow: 0 4px 20px rgba(22, 54, 77, 0.08); }
+        .officer-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(22, 54, 77, 0.15); border-color: rgba(87, 255, 143, 0.3); }
+        .officer-card-title { margin: 0 0 8px; font-size: 1.3rem; font-weight: 700; color: #16364d; letter-spacing: -0.03em; }
+        .officer-card-sub { margin: 0 0 24px; font-size: 14px; color: #475569; line-height: 1.5; }
         .officer-form { display: flex; flex-direction: column; gap: 22px; }
         .officer-field { display: flex; flex-direction: column; gap: 10px; }
-        .officer-label { font-size: 14px; font-weight: 600; color: #cbd5e1; }
-        .officer-input { padding: clamp(14px, 3vw, 18px) clamp(16px, 4vw, 20px); border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); background: rgba(15,23,42,0.55); color: white; font-size: clamp(15px, 2.5vw, 16px); transition: border-color 0.2s, box-shadow 0.2s; }
-        .officer-input:focus { outline: none; border-color: rgba(56,189,248,0.55); box-shadow: 0 0 0 3px rgba(56,189,248,0.18); }
-        .officer-input::placeholder { color: #64748b; }
+        .officer-label { font-size: 14px; font-weight: 600; color: #16364d; }
+        .officer-input { padding: clamp(14px, 3vw, 18px) clamp(16px, 4vw, 20px); border-radius: 16px; border: 2px solid rgba(22, 54, 77, 0.2); background: #fff; color: #16364d; font-size: clamp(15px, 2.5vw, 16px); transition: all 0.3s ease; }
+        .officer-input:focus { outline: none; border-color: #57ff8f; box-shadow: 0 0 0 3px rgba(87, 255, 143, 0.25); }
+        .officer-input::placeholder { color: #94a3b8; }
         .officer-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         @media (max-width: 400px) { .officer-row { grid-template-columns: 1fr; } }
-        .officer-btn-primary { padding: 20px 30px; border-radius: 18px; border: none; background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; font-size: 17px; font-weight: 700; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 6px 24px rgba(14, 165, 233, 0.35); }
-        .officer-btn-primary:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(14, 165, 233, 0.45); }
-        .officer-btn-primary:active:not(:disabled) { transform: translateY(0); }
+        .officer-btn-primary { padding: 20px 30px; border-radius: 18px; border: none; background: #57ff8f; color: #16364d; font-size: 17px; font-weight: 700; cursor: pointer; transition: all 0.35s cubic-bezier(0.34, 1.2, 0.64, 1); box-shadow: 0 6px 24px rgba(87, 255, 143, 0.4); }
+        .officer-btn-primary:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(87, 255, 143, 0.5); background: #6bff9e; }
+        .officer-btn-primary:active:not(:disabled) { transform: translateY(0) scale(0.98); transition-duration: 0.1s; }
         .officer-btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
 
-        .officer-scan-section { margin-bottom: 24px; background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border-radius: 22px; border: 1px solid rgba(255,255,255,0.08); }
+        .officer-scan-section { margin-bottom: 24px; background: #16364d; border-radius: 22px; border: 2px solid rgba(87, 255, 143, 0.25); padding: 8px; transition: all 0.4s ease; }
+        .officer-scan-section:hover { border-color: rgba(87, 255, 143, 0.45); box-shadow: 0 8px 28px rgba(22, 54, 77, 0.25); }
         .officer-scan-section-header { padding: 22px 24px 8px; }
-        .officer-scan-section-title { margin: 0 0 6px; font-size: 1.28rem; font-weight: 700; color: white; letter-spacing: -0.02em; }
-        .officer-scan-section-sub { margin: 0; font-size: 13px; color: #94a3b8; line-height: 1.45; }
-        .officer-scan-loading { padding: 40px; text-align: center; color: #94a3b8; }
+        .officer-scan-section-title { margin: 0 0 6px; font-size: 1.28rem; font-weight: 700; color: #57ff8f; letter-spacing: -0.02em; }
+        .officer-scan-section-sub { margin: 0; font-size: 13px; color: rgba(87, 255, 143, 0.9); line-height: 1.45; }
+        .officer-scan-loading { padding: 40px; text-align: center; color: rgba(87, 255, 143, 0.8); }
 
         .officer-hero { text-align: center; }
-        .officer-hero-label { font-size: 14px; color: #94a3b8; margin-bottom: 24px; letter-spacing: 0.03em; }
-        .officer-shift-badge { padding: 36px 30px; border-radius: 24px; transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        .officer-shift-badge:hover { transform: scale(1.02); }
-        .officer-shift-badge.morning { background: linear-gradient(135deg, rgba(251,191,36,0.24), rgba(245,158,11,0.14)); border: 1px solid rgba(251,191,36,0.4); box-shadow: 0 12px 32px rgba(251, 191, 36, 0.12); }
-        .officer-shift-badge.afternoon { background: linear-gradient(135deg, rgba(59,130,246,0.24), rgba(37,99,235,0.14)); border: 1px solid rgba(59,130,246,0.4); box-shadow: 0 12px 32px rgba(59, 130, 246, 0.12); }
-        .officer-shift-badge.fulltime { background: linear-gradient(135deg, rgba(139,92,246,0.24), rgba(124,58,237,0.14)); border: 1px solid rgba(139,92,246,0.4); box-shadow: 0 12px 32px rgba(139, 92, 246, 0.12); }
-        .officer-shift-badge.dayoff, .officer-shift-badge.vacation { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); }
-        .officer-shift-emoji { display: block; font-size: 3rem; margin-bottom: 12px; }
-        .officer-shift-text { display: block; font-size: 1.7rem; font-weight: 700; color: white; letter-spacing: -0.03em; }
-        .officer-shift-hint { display: block; font-size: 14px; color: #94a3b8; margin-top: 8px; }
-        .officer-choose-prompt { color: #94a3b8; margin-bottom: 20px; font-size: 15px; }
+        .officer-hero-label { font-size: 14px; color: #16364d; margin-bottom: 24px; letter-spacing: 0.03em; }
+        .officer-shift-badge { padding: 36px 30px; border-radius: 24px; transition: all 0.4s cubic-bezier(0.34, 1.2, 0.64, 1); position: relative; overflow: hidden; }
+        .officer-shift-badge::before { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 0%, rgba(87, 255, 143, 0.1) 100%); opacity: 0; transition: opacity 0.4s; }
+        .officer-shift-badge:hover { transform: translateY(-6px) scale(1.02); }
+        .officer-shift-badge:hover::before { opacity: 1; }
+        .officer-shift-badge.morning { background: linear-gradient(135deg, rgba(87, 255, 143, 0.35), rgba(87, 255, 143, 0.2)); border: 2px solid rgba(87, 255, 143, 0.5); box-shadow: 0 12px 32px rgba(87, 255, 143, 0.2); color: #16364d; }
+        .officer-shift-badge.morning:hover { box-shadow: 0 16px 40px rgba(87, 255, 143, 0.3); }
+        .officer-shift-badge.afternoon { background: linear-gradient(135deg, #16364d 0%, #1e4a6a 100%); border: 2px solid rgba(87, 255, 143, 0.4); box-shadow: 0 12px 32px rgba(22, 54, 77, 0.3); color: #57ff8f; }
+        .officer-shift-badge.afternoon:hover { box-shadow: 0 16px 40px rgba(87, 255, 143, 0.2); }
+        .officer-shift-badge.fulltime { background: linear-gradient(135deg, #1a3d52 0%, #16364d 100%); border: 2px solid rgba(87, 255, 143, 0.35); box-shadow: 0 12px 32px rgba(22, 54, 77, 0.3); color: #57ff8f; }
+        .officer-shift-badge.fulltime:hover { box-shadow: 0 16px 40px rgba(87, 255, 143, 0.2); }
+        .officer-shift-badge.dayoff, .officer-shift-badge.vacation { background: linear-gradient(145deg, #f0f4f8 0%, #e2e8f0 100%); border: 2px solid rgba(22, 54, 77, 0.2); color: #16364d; }
+        .officer-shift-emoji { display: block; font-size: 3rem; margin-bottom: 12px; animation: officer-emojiPop 0.6s cubic-bezier(0.34, 1.2, 0.64, 1); transition: transform 0.4s ease; }
+        .officer-shift-badge:hover .officer-shift-emoji { transform: scale(1.15); }
+        .officer-shift-text { display: block; font-size: 1.7rem; font-weight: 700; color: inherit; letter-spacing: -0.03em; }
+        .officer-shift-hint { display: block; font-size: 14px; color: inherit; margin-top: 8px; opacity: 0.9; }
+        .officer-choose-prompt { color: #16364d; margin-bottom: 20px; font-size: 15px; }
         .officer-shift-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-        .officer-shift-btn { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 28px 20px; border-radius: 22px; border: 2px solid; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); background: transparent; color: inherit; }
-        .officer-shift-btn.morning { border-color: rgba(251,191,36,0.55); color: #fcd34d; }
-        .officer-shift-btn.morning:hover { background: rgba(251,191,36,0.16); transform: translateY(-4px); box-shadow: 0 14px 32px rgba(251, 191, 36, 0.22); }
-        .officer-shift-btn.afternoon { border-color: rgba(59,130,246,0.55); color: #93c5fd; }
-        .officer-shift-btn.afternoon:hover { background: rgba(59,130,246,0.16); transform: translateY(-4px); box-shadow: 0 14px 32px rgba(59, 130, 246, 0.22); }
-        .officer-shift-btn:active { transform: translateY(-2px); }
-        .officer-shift-btn-emoji { font-size: 2.6rem; transition: transform 0.3s; }
-        .officer-shift-btn:hover .officer-shift-btn-emoji { transform: scale(1.12); }
+        .officer-shift-btn { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 28px 20px; border-radius: 22px; border: 2px solid; cursor: pointer; transition: all 0.4s cubic-bezier(0.34, 1.2, 0.64, 1); background: #fff; }
+        .officer-shift-btn.morning { border-color: #57ff8f; color: #16364d; background: rgba(87, 255, 143, 0.12); }
+        .officer-shift-btn.morning:hover { background: rgba(87, 255, 143, 0.25); transform: translateY(-5px); box-shadow: 0 12px 32px rgba(87, 255, 143, 0.3); }
+        .officer-shift-btn.morning .officer-shift-btn-emoji { animation: officer-float 3s ease-in-out infinite; }
+        .officer-shift-btn.afternoon { border-color: #16364d; color: #16364d; background: rgba(22, 54, 77, 0.06); }
+        .officer-shift-btn.afternoon:hover { background: rgba(22, 54, 77, 0.12); transform: translateY(-5px); box-shadow: 0 12px 32px rgba(22, 54, 77, 0.2); border-color: #57ff8f; }
+        .officer-shift-btn.afternoon .officer-shift-btn-emoji { animation: officer-float 3s ease-in-out infinite 0.5s; }
+        .officer-shift-btn:active { transform: translateY(-2px) scale(0.98); }
+        .officer-shift-btn-emoji { font-size: 2.6rem; transition: transform 0.4s; }
+        .officer-shift-btn:hover .officer-shift-btn-emoji { transform: scale(1.2); }
         .officer-shift-btn-label { font-size: 1.1rem; font-weight: 600; }
-        .officer-shift-btn-slots { font-size: 13px; opacity: 0.9; }
-        .officer-waiting { padding: 34px 28px; background: rgba(254,252,232,0.07); border-radius: 22px; text-align: center; border: 1px solid rgba(253, 224, 71, 0.2); }
-        .officer-waiting-emoji { display: block; font-size: 2.75rem; margin-bottom: 12px; animation: officer-pulse 1.5s ease-in-out infinite; }
-        .officer-waiting-text { display: block; font-size: 1.2rem; font-weight: 600; color: #fde047; }
-        .officer-waiting-hint { display: block; font-size: 14px; color: #a3a322; margin-top: 8px; }
+        .officer-shift-btn-slots { font-size: 13px; color: #16364d; opacity: 0.8; }
+        .officer-waiting { padding: 34px 28px; background: #16364d; border-radius: 22px; text-align: center; border: 2px solid rgba(87, 255, 143, 0.3); transition: all 0.4s ease; }
+        .officer-waiting:hover { border-color: rgba(87, 255, 143, 0.5); box-shadow: 0 8px 24px rgba(22, 54, 77, 0.25); }
+        .officer-waiting-emoji { display: block; font-size: 2.75rem; margin-bottom: 12px; animation: officer-pulse 1.8s ease-in-out infinite; }
+        .officer-waiting-text { display: block; font-size: 1.2rem; font-weight: 600; color: #57ff8f; }
+        .officer-waiting-hint { display: block; font-size: 14px; color: rgba(87, 255, 143, 0.9); margin-top: 8px; }
 
-        .officer-stats-title { margin: 0 0 18px; font-size: 1.1rem; font-weight: 700; color: rgba(255,255,255,0.95); }
+        .officer-stats-title { margin: 0 0 18px; font-size: 1.1rem; font-weight: 700; color: #16364d; }
         .officer-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-        .officer-stat { background: rgba(255,255,255,0.06); border-radius: 20px; padding: clamp(16px, 3vw, 20px); text-align: center; border-left: 4px solid; transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1), box-shadow 0.3s ease; }
-        .officer-stat:hover { transform: translateY(-4px); box-shadow: 0 14px 32px rgba(0,0,0,0.2); }
-        .officer-stat.morning { border-color: #fbbf24; }
-        .officer-stat.afternoon { border-color: #3b82f6; }
-        .officer-stat.fulltime { border-color: #8b5cf6; }
-        .officer-stat.dayoff { border-color: #64748b; }
-        .officer-stat-emoji { display: block; font-size: 1.6rem; margin-bottom: 8px; }
-        .officer-stat-value { display: block; font-size: 1.75rem; font-weight: 700; color: white; }
-        .officer-stat-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+        .officer-stat { background: #fff; border-radius: 18px; padding: clamp(16px, 3vw, 20px); text-align: center; border: 2px solid rgba(22, 54, 77, 0.12); border-left: 4px solid #57ff8f; transition: all 0.4s cubic-bezier(0.34, 1.2, 0.64, 1); box-shadow: 0 2px 12px rgba(22, 54, 77, 0.06); }
+        .officer-stat:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(87, 255, 143, 0.15); border-color: rgba(87, 255, 143, 0.3); }
+        .officer-stat.morning { border-left-color: #57ff8f; background: linear-gradient(145deg, rgba(87, 255, 143, 0.08) 0%, #fff 100%); }
+        .officer-stat.afternoon { border-left-color: #16364d; background: linear-gradient(145deg, rgba(22, 54, 77, 0.06) 0%, #fff 100%); }
+        .officer-stat.fulltime { border-left-color: #16364d; background: linear-gradient(145deg, rgba(22, 54, 77, 0.08) 0%, #fff 100%); }
+        .officer-stat.dayoff { border-left-color: rgba(22, 54, 77, 0.4); background: #f8fafc; }
+        .officer-stat-emoji { display: block; font-size: 1.6rem; margin-bottom: 8px; transition: transform 0.4s ease; }
+        .officer-stat:hover .officer-stat-emoji { transform: scale(1.2); }
+        .officer-stat-value { display: block; font-size: 1.75rem; font-weight: 700; color: #16364d; }
+        .officer-stat-label { font-size: 11px; color: #16364d; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em; }
 
-        .officer-history-title { margin: 0 0 18px; font-size: 1.1rem; font-weight: 700; color: rgba(255,255,255,0.95); }
+        .officer-history-title { margin: 0 0 18px; font-size: 1.1rem; font-weight: 700; color: #16364d; }
         .officer-history-list { display: flex; flex-direction: column; gap: 12px; }
-        .officer-history-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: rgba(255,255,255,0.05); border-radius: 16px; transition: background 0.2s, transform 0.2s; border: 1px solid rgba(255,255,255,0.05); }
-        .officer-history-item:hover { background: rgba(255,255,255,0.08); transform: translateX(4px); }
-        .officer-history-item:nth-child(1) { animation: officer-fadeUp 0.4s 0.05s both; }
-        .officer-history-item:nth-child(2) { animation: officer-fadeUp 0.4s 0.1s both; }
-        .officer-history-item:nth-child(3) { animation: officer-fadeUp 0.4s 0.15s both; }
-        .officer-history-item:nth-child(4) { animation: officer-fadeUp 0.4s 0.2s both; }
-        .officer-history-item:nth-child(5) { animation: officer-fadeUp 0.4s 0.25s both; }
-        .officer-history-date { font-size: 15px; color: #94a3b8; }
-        .officer-history-badge { padding: 8px 16px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-        .officer-history-badge.morning { background: rgba(251,191,36,0.22); color: #fcd34d; }
-        .officer-history-badge.afternoon { background: rgba(59,130,246,0.22); color: #93c5fd; }
-        .officer-history-badge.fulltime { background: rgba(139,92,246,0.22); color: #c4b5fd; }
-        .officer-history-badge.dayoff, .officer-history-badge.vacation { background: rgba(255,255,255,0.1); color: #94a3b8; }
-        .officer-history-empty { text-align: center; padding: 40px; color: #64748b; font-size: 15px; }
+        .officer-history-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #f0f4f8; border-radius: 16px; transition: all 0.35s cubic-bezier(0.34, 1.2, 0.64, 1); border: 2px solid transparent; }
+        .officer-history-item:hover { background: rgba(87, 255, 143, 0.12); transform: translateX(6px); border-color: rgba(87, 255, 143, 0.25); }
+        .officer-history-item:nth-child(1) { animation: officer-fadeUp 0.45s 0.05s both; }
+        .officer-history-item:nth-child(2) { animation: officer-fadeUp 0.45s 0.1s both; }
+        .officer-history-item:nth-child(3) { animation: officer-fadeUp 0.45s 0.15s both; }
+        .officer-history-item:nth-child(4) { animation: officer-fadeUp 0.45s 0.2s both; }
+        .officer-history-item:nth-child(5) { animation: officer-fadeUp 0.45s 0.25s both; }
+        .officer-history-date { font-size: 15px; color: #16364d; }
+        .officer-history-badge { padding: 8px 16px; border-radius: 12px; font-size: 12px; font-weight: 600; transition: transform 0.3s ease; }
+        .officer-history-item:hover .officer-history-badge { transform: scale(1.05); }
+        .officer-history-badge.morning { background: rgba(87, 255, 143, 0.3); color: #16364d; }
+        .officer-history-badge.afternoon { background: #16364d; color: #57ff8f; }
+        .officer-history-badge.fulltime { background: #16364d; color: #57ff8f; }
+        .officer-history-badge.dayoff, .officer-history-badge.vacation { background: rgba(22, 54, 77, 0.15); color: #16364d; }
+        .officer-history-empty { text-align: center; padding: 40px; color: #16364d; font-size: 15px; opacity: 0.8; }
 
-        .officer-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+        .officer-modal-overlay { position: fixed; inset: 0; background: rgba(22, 54, 77, 0.6); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
         .officer-modal-overlay-in { animation: officer-fadeIn 0.3s ease-out; }
-        .officer-modal { background: #1e293b; border-radius: 26px; width: 100%; max-width: 420px; overflow: hidden; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 28px 56px rgba(0,0,0,0.45); }
-        .officer-modal-in { animation: officer-scaleIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .officer-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .officer-modal-header h2 { margin: 0; font-size: 1.2rem; font-weight: 700; color: white; }
-        .officer-modal-close { width: 44px; height: 44px; border-radius: 14px; background: rgba(255,255,255,0.08); border: none; color: #94a3b8; cursor: pointer; font-size: 1.1rem; transition: background 0.2s; }
-        .officer-modal-close:hover { background: rgba(255,255,255,0.15); }
-        .officer-profile-card { display: flex; align-items: center; gap: 20px; padding: 28px; background: linear-gradient(145deg, #0ea5e9 0%, #6366f1 100%); color: white; }
-        .officer-profile-avatar { width: 64px; height: 64px; border-radius: 18px; background: rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; font-size: 1.75rem; font-weight: 700; }
-        .officer-profile-info h3 { margin: 0 0 10px; font-size: 1.2rem; font-weight: 700; }
-        .officer-role-badge { background: rgba(255,255,255,0.28); padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .officer-modal { background: #fff; border-radius: 24px; width: 100%; max-width: 420px; overflow: hidden; border: 2px solid rgba(22, 54, 77, 0.15); box-shadow: 0 24px 56px rgba(22, 54, 77, 0.25); }
+        .officer-modal-in { animation: officer-scaleIn 0.4s cubic-bezier(0.34, 1.2, 0.64, 1); }
+        .officer-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 2px solid rgba(22, 54, 77, 0.1); background: #16364d; }
+        .officer-modal-header h2 { margin: 0; font-size: 1.2rem; font-weight: 700; color: #57ff8f; }
+        .officer-modal-close { width: 44px; height: 44px; border-radius: 14px; background: rgba(87, 255, 143, 0.2); border: none; color: #57ff8f; cursor: pointer; font-size: 1.1rem; transition: all 0.3s; }
+        .officer-modal-close:hover { background: rgba(87, 255, 143, 0.35); color: #fff; }
+        .officer-profile-card { display: flex; align-items: center; gap: 20px; padding: 28px; background: #16364d; border-bottom: 2px solid rgba(87, 255, 143, 0.2); color: #57ff8f; }
+        .officer-profile-avatar { width: 64px; height: 64px; border-radius: 18px; background: rgba(87, 255, 143, 0.2); color: #16364d; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; font-weight: 700; }
+        .officer-profile-info h3 { margin: 0 0 10px; font-size: 1.2rem; font-weight: 700; color: #57ff8f; }
+        .officer-role-badge { background: rgba(87, 255, 143, 0.25); color: #16364d; padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: 600; }
         .officer-profile-details { padding: 20px 24px; }
-        .officer-detail-row { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 15px; color: #cbd5e1; }
+        .officer-detail-row { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid rgba(22, 54, 77, 0.1); font-size: 15px; color: #16364d; }
         .officer-detail-row:last-child { border-bottom: none; }
-        .officer-status-active { color: #4ade80; font-weight: 600; }
+        .officer-status-active { color: #57ff8f; font-weight: 600; }
 
-        .officer-lock-overlay { position: fixed; inset: 0; z-index: 300; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; padding: 20px; animation: officer-fadeIn 0.3s ease-out; }
-        .officer-lock-card { background: rgba(30, 41, 59, 0.98); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 40px 32px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 24px 48px rgba(0,0,0,0.4); animation: officer-scaleIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .officer-lock-overlay { position: fixed; inset: 0; z-index: 300; background: #16364d; backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; padding: 20px; animation: officer-fadeIn 0.3s ease-out; }
+        .officer-lock-card { background: #16364d; border: 2px solid rgba(87, 255, 143, 0.3); border-radius: 24px; padding: 40px 32px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 24px 48px rgba(0,0,0,0.3); animation: officer-scaleIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .officer-lock-icon { font-size: 4rem; margin-bottom: 16px; }
-        .officer-lock-title { margin: 0 0 12px; font-size: 1.5rem; font-weight: 700; color: white; }
-        .officer-lock-text { margin: 0 0 24px; font-size: 15px; color: #94a3b8; line-height: 1.5; }
-        .officer-lock-error { margin: 0 0 16px; font-size: 13px; color: #f87171; }
-        .officer-lock-btn { display: block; width: 100%; padding: 18px 24px; border-radius: 16px; border: none; background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.25s ease; margin-bottom: 12px; }
-        .officer-lock-btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-2px); }
+        .officer-lock-title { margin: 0 0 12px; font-size: 1.5rem; font-weight: 700; color: #57ff8f; }
+        .officer-lock-text { margin: 0 0 24px; font-size: 15px; color: rgba(87, 255, 143, 0.9); line-height: 1.5; }
+        .officer-lock-error { margin: 0 0 16px; font-size: 13px; color: #ff6b6b; }
+        .officer-lock-btn { display: block; width: 100%; padding: 18px 24px; border-radius: 16px; border: none; background: #57ff8f; color: #16364d; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.25s ease; margin-bottom: 12px; }
+        .officer-lock-btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(87, 255, 143, 0.4); }
         .officer-lock-btn:disabled { opacity: 0.8; cursor: not-allowed; }
-        .officer-lock-logout { display: block; width: 100%; padding: 14px; border: none; background: transparent; color: #94a3b8; font-size: 14px; cursor: pointer; text-decoration: underline; }
-        .officer-lock-logout:hover { color: #e2e8f0; }
+        .officer-lock-logout { display: block; width: 100%; padding: 14px; border: none; background: transparent; color: rgba(87, 255, 143, 0.9); font-size: 14px; cursor: pointer; text-decoration: underline; }
+        .officer-lock-logout:hover { color: #57ff8f; }
         
         @media (max-width: 600px) {
           .officer-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
@@ -629,8 +689,8 @@ export default function OfficerPage() {
         @media (max-width: 480px) {
           .officer-shift-buttons { grid-template-columns: 1fr; }
           .officer-main { padding: 14px 12px 120px; }
-          .officer-header { padding: 14px 16px; }
-          .officer-avatar { width: 48px; height: 48px; }
+          .officer-header { padding: 12px 14px; }
+          .officer-logo-img { width: 38px; height: 38px; }
           .officer-title { font-size: 1rem; }
           .officer-tab { padding: 12px 16px; }
           .officer-card { padding: 18px; margin-bottom: 18px; }

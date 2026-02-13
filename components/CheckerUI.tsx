@@ -39,6 +39,16 @@ type CheckerUIProps = { user: { id: string; fullName?: string }; initialView?: V
 const ALLOWED_QR_DOMAIN = "https://immigration.etas.gov.so";
 const VALID_REF_PREFIX = "17";
 
+/** Unique colors for penalty cards (no duplicates); assign by index so each card gets a distinct color. */
+const PENALTY_CARD_COLORS = [
+  "#0f766e", "#6366f1", "#dc2626", "#ea580c", "#ca8a04", "#16a34a", "#2563eb", "#9333ea",
+  "#db2777", "#0891b2", "#65a30d", "#c026d3", "#4f46e5", "#0d9488", "#b45309", "#be123c",
+];
+function getPenaltyCardColor(index: number, userColor: string | null): string {
+  if (userColor && /^#[0-9A-Fa-f]{6}$/.test(userColor)) return userColor;
+  return PENALTY_CARD_COLORS[index % PENALTY_CARD_COLORS.length];
+}
+
 /** Somali: wrong website warning */
 const SOMALI_WRONG_WEBSITE = "QR-ku wuxuu tusayaa websaydh kale (ma aha kan immigrationka). Halkan ka eeg link-ka:";
 /** Somali: wrong reference (must start with 17) */
@@ -130,13 +140,67 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
   const [penaltyColor, setPenaltyColor] = useState("");
   const [penaltyCount, setPenaltyCount] = useState(0);
   const [penaltyShowAddForm, setPenaltyShowAddForm] = useState(false);
-  const [penaltyLayout, setPenaltyLayout] = useState<1 | 2 | 4>(2);
+  const [penaltyLayout, setPenaltyLayout] = useState<1 | 2 | 3 | 4>(() => {
+    if (typeof window === "undefined") return 2;
+    try {
+      const v = parseInt(localStorage.getItem("checker_penalty_layout") ?? "2", 10);
+      if (v >= 1 && v <= 4) return v as 1 | 2 | 3 | 4;
+    } catch {}
+    return 2;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("checker_penalty_layout", String(penaltyLayout));
+    } catch {}
+  }, [penaltyLayout]);
   const [penaltyEditingId, setPenaltyEditingId] = useState<string | null>(null);
   const [penaltyEditStampNo, setPenaltyEditStampNo] = useState("");
   const [penaltyEditNote, setPenaltyEditNote] = useState("");
   const [penaltyEditColor, setPenaltyEditColor] = useState("");
   const [penaltyMenuOpenId, setPenaltyMenuOpenId] = useState<string | null>(null);
   const [penaltyTapFlashId, setPenaltyTapFlashId] = useState<string | null>(null);
+  const [penaltyPinnedIds, setPenaltyPinnedIds] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = localStorage.getItem("checker_penalty_pinned");
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.every((x) => typeof x === "string")) return arr;
+      }
+    } catch {}
+    return [];
+  });
+  const [penaltyStampError, setPenaltyStampError] = useState("");
+  useEffect(() => {
+    try {
+      localStorage.setItem("checker_penalty_pinned", JSON.stringify(penaltyPinnedIds));
+    } catch {}
+  }, [penaltyPinnedIds]);
+  const togglePenaltyPin = (id: string) => {
+    setPenaltyPinnedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+    setPenaltyMenuOpenId(null);
+  };
+  const resetPenaltyCount = async (id: string) => {
+    if (!user?.id || !confirm("Reset count to 0?")) return;
+    try {
+      const res = await fetch(`/api/penalties/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requesterId: user.id, count: 0 }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setMessage("✅ Count reset");
+        setPenaltyMenuOpenId(null);
+        loadPenalties();
+        loadPenaltyAudit();
+      } else setMessage("❌ " + (data.error || "Failed"));
+    } catch (err: unknown) {
+      setMessage("❌ " + (err instanceof Error ? err.message : "Error"));
+    }
+  };
   const [penaltyAuditLogs, setPenaltyAuditLogs] = useState<{ id: string; action: string; createdAt: string; actor?: { fullName: string }; metadata?: unknown }[]>([]);
   const [penaltyHistory, setPenaltyHistory] = useState<{ id: string; date: string; count: number; officerPenalty: { id: string; stampNo: string } }[]>([]);
 
@@ -466,6 +530,16 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
   const createPenalty = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id) return;
+    const stamp = penaltyStampNo.trim();
+    const isDuplicate = penaltyList.some(
+      (p) => p.stampNo.trim().toLowerCase() === stamp.toLowerCase()
+    );
+    if (isDuplicate) {
+      setPenaltyStampError("Already registered");
+      setMessage("❌ Stamp no already registered");
+      return;
+    }
+    setPenaltyStampError("");
     setMessage("");
     setLoading(true);
     try {
@@ -475,7 +549,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
         body: JSON.stringify({
           requesterId: user.id,
           officerId: penaltyOfficerId || undefined,
-          stampNo: penaltyStampNo,
+          stampNo: stamp,
           note: penaltyNote || undefined,
           color: penaltyColor || undefined,
           count: penaltyCount,
@@ -1076,20 +1150,22 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
             </div>
 
             <div className="checker-penalty-toolbar">
-              <button type="button" className="checker-btn-add-counter" onClick={() => setPenaltyShowAddForm(!penaltyShowAddForm)}>
-                + Add Counter
-              </button>
-              <div className="checker-penalty-layout">
-                {([1, 2, 4] as const).map((n) => (
+              <div className="checker-penalty-layout" role="group" aria-label="Cards per row">
+                {([1, 2, 3, 4] as const).map((n) => (
                   <button
                     key={n}
                     type="button"
                     className={"checker-layout-btn" + (penaltyLayout === n ? " active" : "")}
                     onClick={() => setPenaltyLayout(n)}
-                    aria-label={`${n} per row`}
-                    title={`${n} per row`}
+                    aria-label={`${n} column${n > 1 ? "s" : ""} per row`}
+                    title={`${n} card${n > 1 ? "s" : ""} per row`}
                   >
-                    {n}
+                    <span className="checker-layout-icon" aria-hidden>
+                      {[1, 2, 3, 4].slice(0, n).map((i) => (
+                        <span key={i} className="checker-layout-dot" />
+                      ))}
+                    </span>
+                    <span className="checker-layout-num">{n}</span>
                   </button>
                 ))}
               </div>
@@ -1118,21 +1194,32 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
                   <input
                     id="penalty-stamp"
                     type="text"
-                    className="checker-input"
+                    className={`checker-input ${penaltyStampError ? "checker-input-error" : ""}`}
                     value={penaltyStampNo}
-                    onChange={(e) => setPenaltyStampNo(e.target.value)}
+                    onChange={(e) => { setPenaltyStampNo(e.target.value); setPenaltyStampError(""); }}
                     placeholder="Stamp number"
                     required
                   />
-                  <label className="checker-label" htmlFor="penalty-color">Card color (optional, auto if empty)</label>
-                  <input
-                    id="penalty-color"
-                    type="text"
-                    className="checker-input"
-                    value={penaltyColor}
-                    onChange={(e) => setPenaltyColor(e.target.value)}
-                    placeholder="e.g. #0f766e or leave empty"
-                  />
+                  {penaltyStampError && <p className="checker-penalty-stamp-error">{penaltyStampError}</p>}
+                  <label className="checker-label">Card color</label>
+                  <div className="checker-color-picker-row">
+                    <input
+                      type="color"
+                      id="penalty-color-picker"
+                      className="checker-color-picker-input"
+                      value={penaltyColor || "#0f766e"}
+                      onChange={(e) => setPenaltyColor(e.target.value)}
+                      title="Pick color"
+                    />
+                    <button
+                      type="button"
+                      className={`checker-color-auto-btn ${!penaltyColor ? "checker-color-auto-btn-active" : ""}`}
+                      onClick={() => setPenaltyColor("")}
+                      title="Auto (by order)"
+                    >
+                      Auto
+                    </button>
+                  </div>
                   <label className="checker-label" htmlFor="penalty-note">Note (optional)</label>
                   <input
                     id="penalty-note"
@@ -1159,20 +1246,36 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
             )}
 
             {penaltyList.length === 0 ? (
-              <p className="checker-view-sub checker-penalty-empty">No stamps yet. Click &quot;+ Add Counter&quot; to add one.</p>
+              <p className="checker-view-sub checker-penalty-empty">No stamps yet. Tap the + button (bottom right) to add one.</p>
             ) : (
               <div className={`checker-penalty-grid penalty-cols-${penaltyLayout}`}>
                 {[...penaltyList]
-                  .sort((a, b) => b.count - a.count)
-                  .map((p) => (
+                  .sort((a, b) => {
+                    const aPin = penaltyPinnedIds.includes(a.id) ? 1 : 0;
+                    const bPin = penaltyPinnedIds.includes(b.id) ? 1 : 0;
+                    if (bPin !== aPin) return bPin - aPin;
+                    return b.count - a.count;
+                  })
+                  .map((p, idx) => (
                   <div
                     key={p.id}
                     className={`checker-penalty-counter-card ${penaltyTapFlashId === p.id ? "penalty-tap-flash" : ""}`}
-                    style={{ "--penalty-color": p.color || "#6b21a8" } as React.CSSProperties}
+                    style={{ "--penalty-accent": getPenaltyCardColor(idx, p.color) } as React.CSSProperties}
                   >
-                    <div className="checker-penalty-card-header">
-                      <span className="checker-penalty-card-icon">📋</span>
-                      <span className="checker-penalty-card-title">{p.stampNo}</span>
+                    <div className={`checker-penalty-card-header ${penaltyPinnedIds.includes(p.id) ? "checker-penalty-card-pinned" : ""}`}>
+                      <div className="checker-penalty-stamp-wrap">
+                        {p.officer?.fullName ? (
+                          <div className="checker-penalty-officer-stamp-alt">
+                            <span className="checker-penalty-alt-a">{p.officer.fullName}</span>
+                            <span className="checker-penalty-alt-b">Stamp: {p.stampNo}</span>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="checker-penalty-stamp-label">Stamp No:</span>
+                            <span className="checker-penalty-card-stamp-badge">{p.stampNo}</span>
+                          </>
+                        )}
+                      </div>
                       <div className="checker-penalty-card-menu" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
@@ -1187,6 +1290,8 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
                           <>
                             <div className="checker-penalty-menu-backdrop" onClick={() => setPenaltyMenuOpenId(null)} aria-hidden />
                             <div className="checker-penalty-menu-dropdown">
+                              <button type="button" onClick={() => togglePenaltyPin(p.id)}>{penaltyPinnedIds.includes(p.id) ? "Unpin card" : "Pin card"}</button>
+                              <button type="button" onClick={() => resetPenaltyCount(p.id)}>Reset count</button>
                               <button type="button" onClick={() => { setPenaltyEditingId(p.id); setPenaltyEditStampNo(p.stampNo); setPenaltyEditNote(p.note ?? ""); setPenaltyEditColor(p.color ?? ""); setPenaltyMenuOpenId(null); }}>Edit</button>
                               <button type="button" onClick={() => { updatePenaltyCount(p.id, -1); setPenaltyMenuOpenId(null); }}>Decrease</button>
                               <button type="button" onClick={() => { deletePenalty(p.id); setPenaltyMenuOpenId(null); }}>Delete</button>
@@ -1199,7 +1304,11 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
                       <div className="checker-penalty-edit-inline" onClick={(e) => e.stopPropagation()}>
                         <input type="text" className="checker-input checker-input-sm" value={penaltyEditStampNo} onChange={(e) => setPenaltyEditStampNo(e.target.value)} placeholder="Stamp no" />
                         <input type="text" className="checker-input checker-input-sm" value={penaltyEditNote} onChange={(e) => setPenaltyEditNote(e.target.value)} placeholder="Note" />
-                        <input type="text" className="checker-input checker-input-sm" value={penaltyEditColor} onChange={(e) => setPenaltyEditColor(e.target.value)} placeholder="Color #hex" />
+                        <div className="checker-edit-color-row">
+                          <span className="checker-edit-color-label">Color</span>
+                          <input type="color" className="checker-color-picker-input checker-color-picker-input-sm" value={penaltyEditColor || "#0f766e"} onChange={(e) => setPenaltyEditColor(e.target.value)} title="Pick color" />
+                          <button type="button" className={`checker-color-auto-btn checker-color-auto-btn-sm ${!penaltyEditColor ? "checker-color-auto-btn-active" : ""}`} onClick={() => setPenaltyEditColor("")} title="Auto">Auto</button>
+                        </div>
                         <div className="checker-penalty-edit-actions">
                           <button type="button" className="checker-btn-secondary checker-btn-sm" onClick={savePenaltyEdit}>Save</button>
                           <button type="button" className="checker-btn-secondary checker-btn-sm" onClick={() => setPenaltyEditingId(null)}>Cancel</button>
@@ -1217,12 +1326,8 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
                         }}
                         aria-label="Tap to add one to count"
                       >
-                        <div className="checker-penalty-circle-wrap">
-                          <div className="checker-penalty-circle">
-                            <span className="checker-penalty-circle-count">{p.count}</span>
-                          </div>
-                        </div>
-                        <span className="checker-penalty-tap-hint">Tap card to +1</span>
+                        <span className="checker-penalty-circle-count">{p.count}</span>
+                        {p.count === 0 && <span className="checker-penalty-tap-instruction">Tap here to count penalties</span>}
                         {p.note && <p className="checker-penalty-card-note">{p.note}</p>}
                       </button>
                     )}
@@ -1276,6 +1381,16 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
                 </ul>
               )}
             </div>
+
+            <button
+              type="button"
+              className="checker-penalty-fab"
+              onClick={() => setPenaltyShowAddForm(!penaltyShowAddForm)}
+              aria-label="Add counter"
+              title="Add counter"
+            >
+              +
+            </button>
           </section>
         )}
       </main>
@@ -1831,11 +1946,16 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
         .checker-btn-add-counter:active {
           transform: translateY(-1px);
         }
-        .checker-penalty-layout { display: flex; gap: 6px; }
+        .checker-penalty-layout { display: flex; gap: 8px; flex-wrap: wrap; }
         .checker-layout-btn {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          min-width: 40px;
+          height: 40px;
+          padding: 0 10px;
+          border-radius: 12px;
           border: 2px solid #e2e8f0;
           background: #fff;
           font-size: 0.85rem;
@@ -1848,57 +1968,107 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
         }
         .checker-layout-btn:hover { border-color: #0f766e; color: #0f766e; }
         .checker-layout-btn.active { border-color: #0f766e; background: rgba(15, 118, 110, 0.12); color: #0f766e; }
+        .checker-layout-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 2px;
+          width: 20px;
+          height: 14px;
+        }
+        .checker-layout-dot {
+          width: 4px;
+          height: 10px;
+          border-radius: 2px;
+          background: currentColor;
+          opacity: 0.9;
+        }
+        .checker-layout-num {
+          font-weight: 700;
+          font-size: 0.75rem;
+        }
         .checker-penalty-form-card { margin-bottom: 16px; }
         .checker-penalty-empty { margin: 20px 0; text-align: center; color: #64748b; }
+        .checker-penalty-stamp-error { margin: 4px 0 0; font-size: 0.8rem; color: #dc2626; font-weight: 600; }
+        .checker-input-error { border-color: #dc2626; background: #fef2f2; }
+        .checker-penalty-fab {
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          border: none;
+          background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+          color: #fff;
+          font-size: 1.75rem;
+          font-weight: 700;
+          line-height: 1;
+          cursor: pointer;
+          box-shadow: 0 4px 20px rgba(15, 118, 110, 0.4), 0 2px 8px rgba(0,0,0,0.15);
+          transition: transform 0.2s, box-shadow 0.2s;
+          z-index: 50;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+        }
+        .checker-penalty-fab:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(15, 118, 110, 0.5); }
+        .checker-penalty-fab:active { transform: scale(0.98); }
         .checker-penalty-grid {
           display: grid;
-          gap: 8px;
-          margin-bottom: 16px;
+          gap: clamp(8px, 2vw, 14px);
+          margin-bottom: 20px;
           min-width: 0;
           width: 100%;
-          grid-template-columns: repeat(2, 1fr);
         }
-        @media (min-width: 380px) {
-          .checker-penalty-grid { grid-template-columns: repeat(3, 1fr); }
+        .checker-penalty-grid.penalty-cols-1 { grid-template-columns: 1fr; }
+        .checker-penalty-grid.penalty-cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .checker-penalty-grid.penalty-cols-3 { grid-template-columns: repeat(3, 1fr); }
+        .checker-penalty-grid.penalty-cols-4 { grid-template-columns: repeat(4, 1fr); }
+        @media (max-width: 380px) {
+          .checker-penalty-grid.penalty-cols-3 { grid-template-columns: repeat(2, 1fr); }
+          .checker-penalty-grid.penalty-cols-4 { grid-template-columns: repeat(2, 1fr); }
         }
-        @media (min-width: 520px) {
-          .checker-penalty-grid { grid-template-columns: repeat(4, 1fr); }
-        }
-        @media (min-width: 680px) {
-          .checker-penalty-grid { grid-template-columns: repeat(5, 1fr); }
-        }
-        @media (min-width: 840px) {
-          .checker-penalty-grid { grid-template-columns: repeat(6, 1fr); }
-        }
-        @media (min-width: 1000px) {
-          .checker-penalty-grid { grid-template-columns: repeat(7, 1fr); }
-        }
-        @media (min-width: 1160px) {
-          .checker-penalty-grid { grid-template-columns: repeat(8, 1fr); }
-        }
-        @media (max-width: 379px) {
-          .checker-penalty-grid { gap: 6px; }
+        @media (max-width: 280px) {
+          .checker-penalty-grid.penalty-cols-2,
+          .checker-penalty-grid.penalty-cols-3,
+          .checker-penalty-grid.penalty-cols-4 { grid-template-columns: 1fr; }
         }
         @keyframes penaltyCardEnter {
-          from { opacity: 0; transform: scale(0.92); }
-          to { opacity: 1; transform: scale(1); }
+          from { opacity: 0; transform: translateY(16px) scale(0.96); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
         }
         @keyframes penaltyTapFlash {
-          0% { transform: scale(1); box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
-          50% { transform: scale(1.04); box-shadow: 0 12px 32px rgba(0,0,0,0.25); }
-          100% { transform: scale(1); box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
+          0% { transform: scale(1); }
+          50% { transform: scale(1.04); }
+          100% { transform: scale(1); }
+        }
+        @keyframes penaltyHeaderShine {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.92; }
+        }
+        @keyframes penaltyAccentPulse {
+          0%, 100% { filter: brightness(1); }
+          50% { filter: brightness(1.06); }
         }
         .checker-penalty-counter-card {
-          border-radius: 16px;
-          padding: 10px;
+          --accent: var(--penalty-accent, #0f766e);
+          --accent-dark: color-mix(in srgb, var(--accent) 65%, black);
+          --accent-light: color-mix(in srgb, var(--accent) 14%, #fff);
+          border-radius: 20px;
+          padding: 0;
           min-height: 0;
           min-width: 0;
           display: flex;
           flex-direction: column;
-          background: linear-gradient(165deg, var(--penalty-color, #6b21a8) 0%, rgba(0,0,0,0.2) 100%);
-          box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-          transition: transform 0.25s cubic-bezier(0.34, 1.2, 0.64, 1), box-shadow 0.25s ease;
-          animation: penaltyCardEnter 0.35s ease-out backwards;
+          background: #fff;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+          transition: transform 0.25s ease, box-shadow 0.25s ease;
+          animation: penaltyCardEnter 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+          border: 1px solid rgba(0,0,0,0.06);
+          position: relative;
+          overflow: visible;
         }
         .checker-penalty-counter-card:nth-child(1) { animation-delay: 0.02s; }
         .checker-penalty-counter-card:nth-child(2) { animation-delay: 0.05s; }
@@ -1906,59 +2076,133 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
         .checker-penalty-counter-card:nth-child(4) { animation-delay: 0.11s; }
         .checker-penalty-counter-card:nth-child(5) { animation-delay: 0.14s; }
         .checker-penalty-counter-card:nth-child(n+6) { animation-delay: 0.17s; }
-        .checker-penalty-counter-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.2); }
-        .checker-penalty-counter-card:focus-within { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,0,0,0.18); }
-        .checker-penalty-counter-card.penalty-tap-flash { animation: penaltyTapFlash 0.4s ease-out; }
+        .checker-penalty-counter-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 12px 32px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06);
+        }
+        .checker-penalty-counter-card:focus-within {
+          box-shadow: 0 8px 28px rgba(0,0,0,0.08), 0 0 0 2px var(--accent);
+        }
+        .checker-penalty-counter-card.penalty-tap-flash { animation: penaltyTapFlash 0.35s ease-out; }
         .checker-penalty-card-header {
           display: flex;
           align-items: center;
-          gap: 6px;
-          margin-bottom: 6px;
+          justify-content: space-between;
+          gap: 8px;
+          padding: 12px 14px 10px;
           flex-shrink: 0;
+          min-height: 2.5em;
+          background: var(--accent-dark);
+          animation: penaltyHeaderShine 3s ease-in-out infinite;
         }
-        .checker-penalty-card-icon { font-size: 0.95rem; opacity: 0.95; }
-        .checker-penalty-card-title {
+        .checker-penalty-stamp-wrap {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          min-width: 0;
           flex: 1;
+        }
+        .checker-penalty-officer-stamp-alt {
+          position: relative;
+          min-height: 2.2em;
+          display: flex;
+          align-items: center;
+        }
+        .checker-penalty-alt-a {
+          position: relative;
+          font-size: clamp(0.7rem, 1.9vw, 0.85rem);
           font-weight: 700;
-          font-size: 0.8rem;
           color: #fff;
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
-        .checker-penalty-card-menu { position: relative; }
+        .checker-penalty-alt-b {
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 0;
+          font-size: clamp(0.7rem, 1.9vw, 0.85rem);
+          font-weight: 700;
+          color: #fff;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        @keyframes penaltyAltSwitch {
+          0%, 45% { opacity: 1; }
+          50%, 95% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        .checker-penalty-alt-a { animation: penaltyAltSwitch 4s ease-in-out infinite; }
+        .checker-penalty-alt-b { animation: penaltyAltSwitch 4s ease-in-out 2s infinite; }
+        .checker-penalty-card-pinned {
+          box-shadow: inset 3px 0 0 rgba(255,255,255,0.6);
+        }
+        .checker-penalty-stamp-label {
+          font-size: 0.65rem;
+          font-weight: 600;
+          color: rgba(255,255,255,0.85);
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+        .checker-penalty-card-stamp-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 6px 14px;
+          border-radius: 999px;
+          background: transparent;
+          color: #fff;
+          font-weight: 700;
+          font-size: clamp(0.8rem, 2.2vw, 0.95rem);
+          letter-spacing: 0.02em;
+          min-width: 0;
+          word-break: break-word;
+          overflow-wrap: break-word;
+        }
+        .checker-penalty-grid.penalty-cols-3 .checker-penalty-card-menu,
+        .checker-penalty-grid.penalty-cols-4 .checker-penalty-card-menu { display: none; }
+        .checker-penalty-grid.penalty-cols-3 .checker-penalty-card-stamp-badge,
+        .checker-penalty-grid.penalty-cols-4 .checker-penalty-card-stamp-badge { font-size: 0.7rem; padding: 4px 10px; }
+        .checker-penalty-grid.penalty-cols-3 .checker-penalty-stamp-label,
+        .checker-penalty-grid.penalty-cols-4 .checker-penalty-stamp-label { font-size: 0.58rem; }
+        .checker-penalty-card-menu { position: relative; flex-shrink: 0; }
         .checker-penalty-dots {
-          width: 28px;
-          height: 28px;
-          border-radius: 8px;
+          width: 32px;
+          height: 32px;
+          border-radius: 10px;
           border: none;
-          background: rgba(255,255,255,0.25);
-          font-size: 1.25rem;
+          background: rgba(255,255,255,0.2);
+          font-size: 1.2rem;
           line-height: 1;
           cursor: pointer;
           color: #fff;
-          transition: background 0.2s;
+          transition: background 0.2s, color 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
-        .checker-penalty-dots:hover { background: rgba(255,255,255,0.4); }
+        .checker-penalty-dots:hover { background: rgba(255,255,255,0.35); }
         .checker-penalty-menu-backdrop { position: fixed; inset: 0; z-index: 10; }
         .checker-penalty-menu-dropdown {
           position: absolute;
-          top: 100%;
+          bottom: 100%;
+          top: auto;
           right: 0;
-          margin-top: 6px;
-          min-width: 110px;
+          margin-bottom: 6px;
+          margin-top: 0;
+          min-width: 128px;
           padding: 6px 0;
           background: #fff;
-          border-radius: 12px;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+          border-radius: 14px;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
           border: 1px solid #e2e8f0;
-          z-index: 11;
+          z-index: 100;
         }
         .checker-penalty-menu-dropdown button {
           display: block;
           width: 100%;
-          padding: 10px 14px;
+          padding: 10px 16px;
           border: none;
           background: none;
           font-size: 0.9rem;
@@ -1967,7 +2211,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
           color: #334155;
           transition: background 0.2s;
         }
-        .checker-penalty-menu-dropdown button:hover { background: #f1f5f9; }
+        .checker-penalty-menu-dropdown button:hover { background: #f8fafc; }
         .checker-penalty-tap-area {
           display: flex;
           flex-direction: column;
@@ -1975,53 +2219,51 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
           justify-content: center;
           width: 100%;
           flex: 1;
-          min-height: 72px;
+          min-height: clamp(72px, 18vw, 100px);
           border: none;
-          background: transparent;
+          background: var(--accent-light);
           cursor: pointer;
-          padding: 10px 8px;
+          padding: 16px 14px 18px;
           text-align: center;
           touch-action: manipulation;
           -webkit-tap-highlight-color: transparent;
-          border-radius: 12px;
-          transition: background 0.2s;
+          border-radius: 0 0 20px 20px;
+          transition: transform 0.15s;
         }
-        .checker-penalty-tap-area:hover { background: rgba(255,255,255,0.08); }
-        .checker-penalty-tap-area:active { background: rgba(255,255,255,0.15); }
-        .checker-penalty-tap-hint {
-          margin: 6px 0 0;
-          font-size: 0.7rem;
-          color: rgba(255,255,255,0.9);
-          font-weight: 600;
-        }
-        .checker-penalty-circle-wrap { display: flex; justify-content: center; align-items: center; }
-        .checker-penalty-circle {
-          width: 52px;
-          height: 52px;
-          border-radius: 50%;
-          border: 3px solid rgba(255,255,255,0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(255,255,255,0.18);
-          backdrop-filter: blur(8px);
-          transition: transform 0.2s;
-        }
-        .checker-penalty-tap-area:active .checker-penalty-circle { transform: scale(1.08); }
+        .checker-penalty-tap-area:hover,
+        .checker-penalty-tap-area:active { background: var(--accent-light); }
         .checker-penalty-circle-count {
-          font-size: 1.4rem;
+          font-size: clamp(1.75rem, 5vw, 2.25rem);
           font-weight: 800;
-          color: #fff;
-          text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          color: var(--accent);
+          letter-spacing: -0.02em;
+          line-height: 1;
+          transition: transform 0.15s;
+          animation: penaltyAccentPulse 2.5s ease-in-out infinite;
+        }
+        .checker-penalty-tap-area:active .checker-penalty-circle-count { transform: scale(1.06); animation: none; }
+        .checker-penalty-tap-instruction {
+          display: block;
+          margin-top: 6px;
+          font-size: 0.68rem;
+          font-weight: 600;
+          color: var(--accent);
+          opacity: 0.9;
+          max-width: 140px;
+          text-align: center;
+          line-height: 1.25;
         }
         .checker-penalty-card-note {
-          margin: 4px 0 0;
-          font-size: 0.68rem;
-          color: rgba(255,255,255,0.9);
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+          margin: 10px 0 0;
+          font-size: clamp(0.65rem, 1.7vw, 0.75rem);
+          color: #64748b;
+          white-space: normal;
+          word-wrap: break-word;
+          line-height: 1.35;
+          padding: 0 4px;
         }
+        .checker-penalty-grid.penalty-cols-3 .checker-penalty-card-note,
+        .checker-penalty-grid.penalty-cols-4 .checker-penalty-card-note { display: none; }
         .checker-penalty-history-card { margin-top: 8px; }
         .checker-history-list { max-height: 180px; }
         .checker-penalty-count-badge {
@@ -2036,10 +2278,11 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
           display: flex;
           flex-direction: column;
           gap: 8px;
-          margin-top: 8px;
-          padding: 12px;
-          background: rgba(255,255,255,0.95);
+          margin: 8px 12px 12px;
+          padding: 14px;
+          background: #f8fafc;
           border-radius: 14px;
+          border: 1px solid #e2e8f0;
         }
         .checker-penalty-edit-inline .checker-input-sm { width: 100%; background: #fff; border-color: #e2e8f0; color: #0f172a; }
         .checker-penalty-edit-actions { display: flex; gap: 8px; margin-top: 4px; }
@@ -2052,6 +2295,46 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
           margin-bottom: 8px;
           color: #334155;
         }
+        .checker-color-picker-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+        .checker-color-picker-input {
+          width: 48px;
+          height: 40px;
+          padding: 2px;
+          border: 2px solid #e2e8f0;
+          border-radius: 12px;
+          cursor: pointer;
+          background: #fff;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .checker-color-picker-input:hover { border-color: #cbd5e1; }
+        .checker-color-picker-input:focus { outline: none; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2); }
+        .checker-color-picker-input-sm { width: 36px; height: 32px; border-radius: 10px; }
+        .checker-color-auto-btn {
+          padding: 8px 16px;
+          border-radius: 10px;
+          border: 2px solid #e2e8f0;
+          background: #f8fafc;
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: #64748b;
+          cursor: pointer;
+          transition: border-color 0.2s, background 0.2s, color 0.2s;
+        }
+        .checker-color-auto-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+        .checker-color-auto-btn-active { border-color: #0f766e; background: rgba(15, 118, 110, 0.1); color: #0f766e; }
+        .checker-color-auto-btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        .checker-edit-color-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .checker-edit-color-label { font-size: 0.8rem; font-weight: 600; color: #334155; }
         .checker-field-row {
           display: flex;
           flex-wrap: wrap;
