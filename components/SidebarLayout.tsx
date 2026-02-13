@@ -142,8 +142,8 @@ export default function SidebarLayout({
       {/* Sidebar */}
       <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""} ${mobileMenuOpen ? "mobile-open" : ""}`}>
         <div className="sidebar-header">
-          <div className="logo">🛫</div>
-          {!sidebarCollapsed && <div className="logo-text">Immigration</div>}
+          <img src="/logo.svg" alt="" className="logo-img" />
+          {!sidebarCollapsed && <div className="logo-text">Arrival</div>}
           <button
             type="button"
             className="sidebar-close-mobile"
@@ -234,6 +234,7 @@ export default function SidebarLayout({
           >
             ☰
           </button>
+          <img src="/logo.svg" alt="" className="top-bar-logo" />
           <div className="user-info-bar">
             <span className="welcome-text">Welcome back, {user?.fullName}</span>
             <span className="role-badge-top">{user?.role}</span>
@@ -313,8 +314,10 @@ export default function SidebarLayout({
           justify-content: center;
         }
 
-        .logo {
-          font-size: 2rem;
+        .logo-img {
+          width: 36px;
+          height: 36px;
+          flex-shrink: 0;
         }
 
         .logo-text {
@@ -481,6 +484,12 @@ export default function SidebarLayout({
           justify-content: center;
           transition: background 0.2s;
         }
+        .top-bar-logo {
+          width: 32px;
+          height: 32px;
+          flex-shrink: 0;
+        }
+
         .toggle-sidebar:hover {
           background: rgba(255, 255, 255, 0.12);
         }

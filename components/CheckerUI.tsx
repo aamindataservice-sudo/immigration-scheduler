@@ -102,6 +102,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
   const streamRef = useRef<MediaStream | null>(null);
   const scanAnimationRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [currentView, setCurrentView] = useState<View>(initialView ?? "menu");
+  const [profileOpen, setProfileOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [scanError, setScanError] = useState("");
@@ -718,23 +719,42 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
     <div className="checker-page">
       <header className="checker-header">
         <div className="checker-brand">
-          <div className="checker-logo" aria-hidden>SV</div>
+          <img src="/logo.svg" alt="" className="checker-logo-img" aria-hidden />
           <div className="checker-header-inner">
-            <h1 className="checker-title">Somalia E-Visa</h1>
+            <h1 className="checker-title">International Arrival</h1>
             <span className="checker-subtitle">Payment & visa verification</span>
           </div>
         </div>
         <div className="checker-header-right">
-          <span className="checker-badge">
-            <span className="checker-badge-dot" />
-            Secure
-          </span>
-          <a href="/change-password" className="checker-change-pwd" aria-label="Change password">
-            Change password
-          </a>
-          <button type="button" className="checker-logout" onClick={logout} aria-label="Logout">
-            Log out
-          </button>
+          <div className="checker-profile-wrap">
+            <button
+              type="button"
+              className="checker-profile-btn"
+              onClick={() => setProfileOpen((o) => !o)}
+              aria-expanded={profileOpen}
+              aria-haspopup="true"
+              aria-label="Profile menu"
+            >
+              <span className="checker-profile-avatar">{(user?.fullName || "U").charAt(0).toUpperCase()}</span>
+            </button>
+            {profileOpen && (
+              <>
+                <div className="checker-profile-backdrop" onClick={() => setProfileOpen(false)} aria-hidden />
+                <div className="checker-profile-dropdown">
+                  <div className="checker-profile-head">
+                    <span className="checker-profile-name">{user?.fullName || "User"}</span>
+                    <span className="checker-profile-role">Checker</span>
+                  </div>
+                  <a href="/change-password" className="checker-profile-item" onClick={() => setProfileOpen(false)}>
+                    Change password
+                  </a>
+                  <button type="button" className="checker-profile-item checker-profile-logout" onClick={() => { setProfileOpen(false); logout(); }}>
+                    Log out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -747,6 +767,9 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
       <main className="checker-main">
         {currentView === "menu" && (
           <section className="checker-menu">
+            <div className="checker-welcome-banner">
+              <span className="checker-welcome-banner-text">Welcome back, <strong>{user?.fullName || "User"}</strong></span>
+            </div>
             <p className="checker-menu-subtitle">Choose an option</p>
             <div className="checker-menu-buttons">
               <button type="button" className="checker-menu-btn checker-menu-btn-1 checker-card-anim" onClick={() => setCurrentView("payment")}>
@@ -755,19 +778,13 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
                 <span className="checker-menu-btn-desc">View receipt</span>
                 <span className="checker-menu-today">{paymentToday} today</span>
               </button>
-              <button type="button" className="checker-menu-btn checker-menu-btn-2 checker-card-anim checker-card-delay-1" onClick={() => setCurrentView("evisa")}>
-                <span className="checker-menu-icon">📄</span>
-                <span className="checker-menu-btn-label">Check Visa</span>
-                <span className="checker-menu-btn-desc">Download e-Visa</span>
-                <span className="checker-menu-today">{evisaToday} today</span>
-              </button>
-              <button type="button" className="checker-menu-btn checker-menu-btn-3 checker-card-anim checker-card-delay-2" onClick={() => { setScanError(""); setCameraError(""); setCurrentView("scan"); }}>
+              <button type="button" className="checker-menu-btn checker-menu-btn-3 checker-card-anim checker-card-delay-1" onClick={() => { setScanError(""); setCameraError(""); setCurrentView("scan"); }}>
                 <span className="checker-menu-icon">📷</span>
                 <span className="checker-menu-btn-label">Scan me</span>
                 <span className="checker-menu-btn-desc">Scan QR code</span>
                 <span className="checker-menu-today">{totalToday} total today</span>
               </button>
-              <button type="button" className="checker-menu-btn checker-menu-btn-4 checker-card-anim checker-card-delay-3" onClick={() => setCurrentView("penalties")}>
+              <button type="button" className="checker-menu-btn checker-menu-btn-4 checker-card-anim checker-card-delay-2" onClick={() => setCurrentView("penalties")}>
                 <span className="checker-menu-icon">📋</span>
                 <span className="checker-menu-btn-label">Officer penalties</span>
                 <span className="checker-menu-btn-desc">Stamps & count</span>
@@ -1284,13 +1301,16 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
           50% { transform: translateY(-6px); }
         }
         @keyframes checkerCardIn {
-          from { opacity: 0; transform: translateY(20px) scale(0.96); }
+          from { opacity: 0; transform: translateY(24px) scale(0.92); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
-        .checker-card-anim { animation: checkerCardIn 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) forwards; }
-        .checker-card-delay-1 { animation-delay: 0.08s; opacity: 0; }
-        .checker-card-delay-2 { animation-delay: 0.16s; opacity: 0; }
-        .checker-card-delay-3 { animation-delay: 0.24s; opacity: 0; }
+        .checker-card-anim {
+          animation: checkerCardIn 0.55s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+          opacity: 0;
+        }
+        .checker-card-delay-1 { animation-delay: 0.12s; }
+        .checker-card-delay-2 { animation-delay: 0.24s; }
+        .checker-card-delay-3 { animation-delay: 0.36s; }
         .checker-menu-today {
           display: inline-block;
           margin-top: 6px;
@@ -1310,7 +1330,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
           box-sizing: border-box;
           padding: clamp(8px, 3vw, 24px);
           padding-bottom: clamp(20px, 6vw, 48px);
-          background: linear-gradient(165deg, #f0fdfa 0%, #e0f2fe 35%, #f8fafc 70%);
+          background: linear-gradient(165deg, #ecfeff 0%, #f0fdfa 25%, #e0f2fe 50%, #f8fafc 85%);
           background-attachment: scroll;
           -webkit-overflow-scrolling: touch;
         }
@@ -1329,20 +1349,12 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
           gap: 12px;
           min-width: 0;
         }
-        .checker-logo {
+        .checker-logo-img {
           width: 44px;
           height: 44px;
           border-radius: 12px;
-          background: linear-gradient(135deg, #0f766e, #0d9488);
-          color: #fff;
-          font-size: 0.75rem;
-          font-weight: 800;
-          letter-spacing: -0.02em;
-          display: flex;
-          align-items: center;
-          justify-content: center;
           flex-shrink: 0;
-          box-shadow: 0 4px 14px rgba(15, 118, 110, 0.35);
+          object-fit: contain;
         }
         .checker-header-inner {
           min-width: 0;
@@ -1363,60 +1375,92 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
         .checker-header-right {
           display: flex;
           align-items: center;
-          gap: 10px;
         }
-        .checker-badge {
-          display: inline-flex;
+        .checker-profile-wrap {
+          position: relative;
+        }
+        .checker-profile-btn {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          border: 2px solid rgba(15, 118, 110, 0.35);
+          background: linear-gradient(145deg, #0f766e, #14b8a6);
+          color: #fff;
+          font-size: 1.1rem;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
           align-items: center;
-          gap: 6px;
-          padding: 6px 12px;
-          border-radius: 999px;
-          font-size: 0.75rem;
-          font-weight: 600;
-          color: #0f766e;
-          background: rgba(20, 184, 166, 0.12);
-          border: 1px solid rgba(20, 184, 166, 0.3);
+          justify-content: center;
+          transition: transform 0.2s, box-shadow 0.2s;
+          -webkit-tap-highlight-color: transparent;
         }
-        .checker-badge-dot {
-          width: 6px;
-          height: 6px;
-          border-radius: 999px;
-          background: #10b981;
-          animation: checkerPulse 2s ease-in-out infinite;
+        .checker-profile-btn:hover {
+          transform: scale(1.05);
+          box-shadow: 0 4px 16px rgba(15, 118, 110, 0.4);
         }
-        .checker-change-pwd {
-          display: inline-block;
-          padding: 8px 14px;
-          border-radius: 10px;
-          border: 1px solid #e2e8f0;
+        .checker-profile-avatar { line-height: 1; }
+        .checker-profile-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 98;
+          background: transparent;
+        }
+        .checker-profile-dropdown {
+          position: absolute;
+          top: calc(100% + 8px);
+          right: 0;
+          min-width: 200px;
           background: #fff;
-          font-size: 0.8rem;
-          font-weight: 600;
+          border-radius: 14px;
+          box-shadow: 0 12px 32px rgba(15, 23, 42, 0.15);
+          border: 1px solid #e2e8f0;
+          z-index: 99;
+          overflow: hidden;
+          animation: checkerDropdownIn 0.2s ease-out;
+        }
+        @keyframes checkerDropdownIn {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .checker-profile-head {
+          padding: 14px 16px;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        .checker-profile-name {
+          display: block;
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: #0f172a;
+        }
+        .checker-profile-role {
+          display: block;
+          font-size: 0.75rem;
+          color: #64748b;
+          margin-top: 2px;
+        }
+        .checker-profile-item {
+          display: block;
+          width: 100%;
+          padding: 12px 16px;
+          text-align: left;
+          font-size: 0.9rem;
+          font-weight: 500;
           color: #475569;
           text-decoration: none;
+          border: none;
+          background: none;
           cursor: pointer;
-          transition: background 0.2s, color 0.2s, border-color 0.2s;
+          transition: background 0.15s;
         }
-        .checker-change-pwd:hover {
-          background: #f1f5f9;
-          border-color: #cbd5e1;
+        .checker-profile-item:hover {
+          background: #f8fafc;
           color: #0f172a;
         }
-        .checker-logout {
-          padding: 8px 14px;
-          border-radius: 10px;
-          border: 1px solid #e2e8f0;
-          background: #fff;
-          font-size: 0.8rem;
-          font-weight: 600;
-          color: #475569;
-          cursor: pointer;
-          transition: background 0.2s, color 0.2s, border-color 0.2s;
-        }
-        .checker-logout:hover {
-          background: #f1f5f9;
-          border-color: #cbd5e1;
-          color: #0f172a;
+        .checker-profile-logout { color: #dc2626; }
+        .checker-profile-logout:hover {
+          background: #fef2f2;
+          color: #b91c1c;
         }
         .checker-toast {
           position: fixed;
@@ -1436,52 +1480,72 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
         }
         .checker-main {
           width: 100%;
-          max-width: min(540px, calc(100vw - 20px));
+          max-width: min(560px, calc(100vw - 20px));
           margin: 0 auto;
           box-sizing: border-box;
           background: #fff;
-          border-radius: 20px;
-          padding: clamp(14px, 4vw, 28px);
-          box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(15, 23, 42, 0.04);
-          animation: checkerFadeUp 0.35s ease-out;
+          border-radius: 24px;
+          padding: clamp(18px, 4vw, 28px);
+          box-shadow: 0 8px 32px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.05);
+          animation: checkerMainIn 0.5s cubic-bezier(0.34, 1.2, 0.64, 1);
+        }
+        @keyframes checkerMainIn {
+          from { opacity: 0; transform: translateY(16px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
         }
         .checker-menu {
           display: flex;
           flex-direction: column;
-          align-items: center;
+          align-items: stretch;
           gap: 24px;
           padding: 8px 0;
+        }
+        .checker-welcome-banner {
+          padding: 14px 18px;
+          border-radius: 14px;
+          background: linear-gradient(135deg, rgba(15, 118, 110, 0.1) 0%, rgba(20, 184, 166, 0.08) 100%);
+          border: 1px solid rgba(15, 118, 110, 0.18);
+          animation: checkerBannerIn 0.4s ease-out;
+        }
+        @keyframes checkerBannerIn {
+          from { opacity: 0; transform: translateY(-6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .checker-welcome-banner-text {
+          font-size: 0.95rem;
+          color: #475569;
+        }
+        .checker-welcome-banner-text strong {
+          color: #0f172a;
+          font-weight: 700;
         }
         .checker-menu-subtitle {
           font-size: clamp(0.9rem, 2.5vw, 1rem);
           color: #64748b;
           text-align: center;
           margin: 0;
+          animation: checkerFadeUp 0.4s ease-out 0.35s forwards;
+          opacity: 0;
         }
         .checker-menu-buttons {
           display: grid;
-          grid-template-columns: 1fr;
+          grid-template-columns: repeat(2, 1fr);
           gap: 14px;
           width: 100%;
         }
-        @media (min-width: 400px) {
+        @media (min-width: 520px) {
           .checker-menu-buttons {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
           }
         }
-        @media (min-width: 560px) {
-          .checker-menu-buttons {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-        @media (min-width: 640px) {
+        @media (min-width: 720px) {
           .checker-menu-buttons {
             grid-template-columns: repeat(4, 1fr);
           }
         }
         .checker-menu-btn {
           padding: clamp(14px, 3vw, 22px) 12px;
-          border-radius: 16px;
+          border-radius: 18px;
           border: none;
           cursor: pointer;
           font-size: 0.95rem;
@@ -1491,20 +1555,30 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
           align-items: center;
           gap: 6px;
           text-align: center;
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-          min-height: 110px;
+          transition: transform 0.25s cubic-bezier(0.34, 1.2, 0.64, 1), box-shadow 0.25s ease, filter 0.2s;
+          min-height: 114px;
           touch-action: manipulation;
           -webkit-tap-highlight-color: transparent;
+          position: relative;
+          overflow: hidden;
+        }
+        .checker-menu-btn::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+          opacity: 0;
+          transition: opacity 0.25s;
         }
         .checker-menu-btn:hover {
-          transform: translateY(-6px) scale(1.02);
-          opacity: 0.98;
+          transform: translateY(-8px) scale(1.03);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+        .checker-menu-btn:hover::after {
+          opacity: 1;
         }
         .checker-menu-btn:active {
-          transform: translateY(-2px);
-        }
-        .checker-menu-btn:active {
-          transform: translateY(-1px);
+          transform: translateY(-3px) scale(1.01);
         }
         .checker-menu-btn-1 {
           background: linear-gradient(145deg, #0f766e, #0d9488);
@@ -1780,23 +1854,30 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
           display: grid;
           gap: 8px;
           margin-bottom: 16px;
-          grid-template-columns: 1fr;
           min-width: 0;
           width: 100%;
+          grid-template-columns: repeat(2, 1fr);
         }
-        @media (max-width: 399px) {
-          .checker-penalty-grid {
-            grid-template-columns: 1fr !important;
-            gap: 6px;
-          }
+        @media (min-width: 380px) {
+          .checker-penalty-grid { grid-template-columns: repeat(3, 1fr); }
         }
-        @media (min-width: 400px) and (max-width: 699px) {
-          .checker-penalty-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        @media (min-width: 520px) {
+          .checker-penalty-grid { grid-template-columns: repeat(4, 1fr); }
         }
-        @media (min-width: 700px) {
-          .checker-penalty-grid.penalty-cols-1 { grid-template-columns: 1fr; }
-          .checker-penalty-grid.penalty-cols-2 { grid-template-columns: repeat(2, 1fr); }
-          .checker-penalty-grid.penalty-cols-4 { grid-template-columns: repeat(4, 1fr); }
+        @media (min-width: 680px) {
+          .checker-penalty-grid { grid-template-columns: repeat(5, 1fr); }
+        }
+        @media (min-width: 840px) {
+          .checker-penalty-grid { grid-template-columns: repeat(6, 1fr); }
+        }
+        @media (min-width: 1000px) {
+          .checker-penalty-grid { grid-template-columns: repeat(7, 1fr); }
+        }
+        @media (min-width: 1160px) {
+          .checker-penalty-grid { grid-template-columns: repeat(8, 1fr); }
+        }
+        @media (max-width: 379px) {
+          .checker-penalty-grid { gap: 6px; }
         }
         @keyframes penaltyCardEnter {
           from { opacity: 0; transform: scale(0.92); }

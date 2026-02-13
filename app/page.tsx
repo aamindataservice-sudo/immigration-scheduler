@@ -25,11 +25,7 @@ export default function Home() {
   const [biometricState, setBiometricState] = useState<BiometricState>("idle");
   const [attemptCount, setAttemptCount] = useState(0);
   
-  // PWA install prompt
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
-
-  // Check if installed as PWA
+  // Check if installed as PWA (used for routing only)
   const isPWA = typeof window !== "undefined" && 
     (window.matchMedia("(display-mode: standalone)").matches || 
      (window.navigator as any).standalone === true);
@@ -82,17 +78,6 @@ export default function Home() {
   }, [router]);
 
   useEffect(() => {
-    // Check for PWA install prompt
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      const dismissed = localStorage.getItem("pwa_install_dismissed");
-      if (!dismissed && !isPWA) {
-        setShowInstallPrompt(true);
-      }
-    };
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-
     // Check for logged in user
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem("currentUser") : null;
@@ -160,9 +145,7 @@ export default function Home() {
       setTimeout(() => setShowSplash(false), 1500);
     }
 
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    };
+    return () => {};
   }, [router, autoLoginWithBiometric, isPWA]);
 
   const saveBiometric = async (user: any) => {
@@ -172,7 +155,7 @@ export default function Home() {
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge,
-          rp: { name: "Immigration Scheduler", id: window.location.hostname },
+          rp: { name: "International Arrival System", id: window.location.hostname },
           user: { id: new TextEncoder().encode(user.id), name: user.phone, displayName: user.fullName },
           pubKeyCredParams: [{ alg: -7, type: "public-key" }],
           authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
@@ -300,22 +283,6 @@ export default function Home() {
     }
   };
 
-  const installPWA = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === "accepted") {
-        setShowInstallPrompt(false);
-      }
-      setDeferredPrompt(null);
-    }
-  };
-
-  const dismissInstallPrompt = () => {
-    setShowInstallPrompt(false);
-    localStorage.setItem("pwa_install_dismissed", "true");
-  };
-
   const skipBiometric = () => {
     setBiometricState("idle");
     setShowSplash(false);
@@ -334,8 +301,8 @@ export default function Home() {
     return (
       <div className="splash-container">
         <div className="splash-content">
-          <div className="splash-logo">🛫</div>
-          <h1>Immigration Scheduler</h1>
+          <img src="/logo.svg" alt="" className="splash-logo-img" />
+          <h1>International Arrival System</h1>
           
           {biometricState === "scanning" && (
             <div className="biometric-animation scanning">
@@ -423,8 +390,9 @@ export default function Home() {
             color: white;
           }
 
-          .splash-logo {
-            font-size: 5rem;
+          .splash-logo-img {
+            width: 80px;
+            height: 80px;
             margin-bottom: 16px;
             animation: float 3s ease-in-out infinite;
           }
@@ -639,26 +607,11 @@ export default function Home() {
 
   return (
     <div className="auth-container">
-      {/* PWA Install Prompt */}
-      {showInstallPrompt && (
-        <div className="install-prompt">
-          <div className="install-content">
-            <div className="install-icon">📲</div>
-            <div className="install-text">
-              <strong>Install App</strong>
-              <p>Add to home screen for faster access</p>
-            </div>
-            <button className="install-btn" onClick={installPWA}>Install</button>
-            <button className="install-dismiss" onClick={dismissInstallPrompt}>✕</button>
-          </div>
-        </div>
-      )}
-
       <div className="auth-card">
         <div className="auth-header">
-          <div className="auth-logo">🛫</div>
-          <h1>Immigration Scheduler</h1>
-          <p>Manage officer shifts efficiently</p>
+          <img src="/logo.svg" alt="International Arrival System" className="auth-logo-img" />
+          <h1>International Arrival System</h1>
+          <p>Arrival management &amp; shift scheduling</p>
         </div>
 
         {hasAdmin === null && (
@@ -777,79 +730,6 @@ export default function Home() {
           background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
         }
 
-        .install-prompt {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
-          padding: 12px 16px;
-          z-index: 1000;
-          animation: slideDown 0.3s ease-out;
-        }
-
-        @keyframes slideDown {
-          from { transform: translateY(-100%); }
-          to { transform: translateY(0); }
-        }
-
-        .install-content {
-          max-width: 400px;
-          margin: 0 auto;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .install-icon {
-          font-size: 2rem;
-        }
-
-        .install-text {
-          flex: 1;
-          color: white;
-        }
-
-        .install-text strong {
-          display: block;
-          font-size: 14px;
-        }
-
-        .install-text p {
-          font-size: 12px;
-          opacity: 0.9;
-          margin: 0;
-        }
-
-        .install-btn {
-          padding: 8px 16px;
-          background: white;
-          color: #2563eb;
-          border: none;
-          border-radius: 8px;
-          font-weight: 600;
-          font-size: 13px;
-          cursor: pointer;
-        }
-
-        .install-btn:hover {
-          background: #f0f9ff;
-        }
-
-        .install-dismiss {
-          padding: 4px 8px;
-          background: transparent;
-          border: none;
-          color: white;
-          font-size: 18px;
-          cursor: pointer;
-          opacity: 0.7;
-        }
-
-        .install-dismiss:hover {
-          opacity: 1;
-        }
-
         .auth-card {
           max-width: 400px;
           width: 100%;
@@ -864,9 +744,11 @@ export default function Home() {
           margin-bottom: 32px;
         }
 
-        .auth-logo {
-          font-size: 3rem;
+        .auth-logo-img {
+          width: 56px;
+          height: 56px;
           margin-bottom: 12px;
+          display: block;
         }
 
         .auth-header h1 {

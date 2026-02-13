@@ -99,7 +99,7 @@ export default function ChangePasswordPage() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <div className="auth-logo">🔐</div>
+          <img src="/logo.svg" alt="International Arrival System" className="auth-logo-img" />
           <h1>Set Your Password</h1>
           <p>
             {user?.mustChangePassword
@@ -178,9 +178,11 @@ export default function ChangePasswordPage() {
           margin-bottom: 32px;
         }
 
-        .auth-logo {
-          font-size: 3rem;
-          margin-bottom: 12px;
+        .auth-logo-img {
+          width: 56px;
+          height: 56px;
+          margin: 0 auto 12px;
+          display: block;
         }
 
         .auth-header h1 {

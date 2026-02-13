@@ -81,6 +81,7 @@ export default function DashboardPage() {
     <div className="dashboard-page">
       <header className="page-header">
         <div className="header-left">
+          <img src="/logo.svg" alt="" className="header-logo" />
           <div className="user-avatar">{user?.fullName?.charAt(0)?.toUpperCase() || "U"}</div>
           <div className="user-info">
             <h1>{user?.fullName}</h1>
@@ -217,6 +218,12 @@ export default function DashboardPage() {
           display: flex;
           align-items: center;
           gap: 14px;
+        }
+
+        .header-logo {
+          width: 36px;
+          height: 36px;
+          flex-shrink: 0;
         }
 
         .user-avatar {

@@ -89,7 +89,7 @@ export async function GET(req: Request) {
         ``,
         `_Generated at ${timestamp} 🕐_`,
         ``,
-        `🛫 _Immigration Shift System_`,
+        `🛫 _International Arrival System_`,
       ];
     } else {
       // Daily schedule
@@ -146,7 +146,7 @@ export async function GET(req: Request) {
         `_Generated at ${timestamp} 🕐_`,
         ``,
         `━━━━━━━━━━━━━━━━━━`,
-        `🛫 _Immigration Shift System_`,
+        `🛫 _International Arrival System_`,
         `_Soo dhoweynta & Adeegga Wanaagsan!_ ✨`,
       ];
     }

@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ChunkErrorReset from "./ChunkErrorReset";
+import PWAInstall from "@/components/PWAInstall";
+import HelpPanel from "@/components/HelpPanel";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,13 +28,14 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Immigration Shift Scheduler",
-  description: "Shift scheduling for immigration officers",
+  title: "International Arrival System",
+  description: "Arrival management and shift scheduling",
   manifest: "/manifest.json",
+  icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Immigration",
+    title: "Arrival",
   },
 };
 
@@ -44,12 +47,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="icon" href="/icon-192.png" type="image/png" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <ChunkErrorReset />
         {children}
+        <PWAInstall />
+        <HelpPanel />
       </body>
     </html>
   );

@@ -301,7 +301,7 @@ export default function AdminPage() {
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge,
-          rp: { name: "Immigration Scheduler", id: window.location.hostname },
+          rp: { name: "International Arrival System", id: window.location.hostname },
           user: {
             id: new TextEncoder().encode(user.id),
             name: user.phone,
@@ -798,14 +798,14 @@ export default function AdminPage() {
       <aside className={`sidebar ${mobileMenuOpen ? "open" : ""}`}>
         <div className="sidebar-header-mobile">
         <div className="sidebar-brand">
-            <span className="brand-icon">🛫</span>
-            <span className="brand-text">Immigration</span>
+            <img src="/logo.svg" alt="" className="brand-logo-img" />
+            <span className="brand-text">Arrival</span>
           </div>
           <button className="close-menu-btn" onClick={closeMobileMenu} aria-label="Close menu">✕</button>
         </div>
         <div className="sidebar-brand desktop-only">
-          <span className="brand-icon">🇸🇴</span>
-          <span className="brand-text">Immigration</span>
+          <img src="/logo.svg" alt="" className="brand-logo-img" />
+          <span className="brand-text">Arrival</span>
         </div>
         <nav className="sidebar-nav">
           <a href="#" className="nav-item" onClick={(e) => { e.preventDefault(); closeMobileMenu(); setShowProfile(true); }}>
@@ -1204,7 +1204,7 @@ export default function AdminPage() {
               <div className="sc-brand">
                 <div className="sc-logo">🛫</div>
                 <div className="sc-title">
-                  <strong>Immigration Office</strong>
+                  <strong>International Arrival</strong>
                   <span>Daily Schedule</span>
                 </div>
               </div>
@@ -2392,8 +2392,10 @@ export default function AdminPage() {
           border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .brand-icon {
-          font-size: 1.5rem;
+        .brand-logo-img {
+          width: 28px;
+          height: 28px;
+          display: block;
         }
 
         .brand-text {
@@ -4065,8 +4067,9 @@ export default function AdminPage() {
           border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .brand-icon {
-          font-size: 16px;
+        .brand-logo-img {
+          width: 24px;
+          height: 24px;
         }
 
         .brand-text {
