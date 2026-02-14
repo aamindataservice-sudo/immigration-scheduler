@@ -192,7 +192,7 @@ export default function OfficerPage() {
     }
   };
 
-  const logout = () => { localStorage.removeItem("currentUser"); router.push("/"); };
+  const logout = () => { localStorage.removeItem("currentUser"); localStorage.removeItem("sessionToken"); router.push("/"); };
 
   const playSomaliInstructions = () => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;

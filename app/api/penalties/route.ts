@@ -2,30 +2,28 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { getMogadishuTodayISO } from "@/lib/time";
+import { getRequesterForRestrictedApi } from "@/lib/session";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const requesterId = searchParams.get("requesterId") ?? "";
+    const requesterIdParam = searchParams.get("requesterId") ?? "";
     const officerId = searchParams.get("officerId") ?? "";
 
-    if (!requesterId) {
+    if (!requesterIdParam) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
     }
 
-    const requester = await prisma.user.findUnique({
-      where: { id: requesterId },
-      select: { role: true },
-    });
+    const requester = await getRequesterForRestrictedApi(req, requesterIdParam);
     if (!requester) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ ok: false, error: "Unauthorized or session expired" }, { status: 403 });
     }
     if (requester.role !== "CHECKER" && requester.role !== "SUPER_ADMIN") {
       return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
     }
 
     const where: { createdBy?: string; officerId?: string } = {};
-    if (requester.role === "CHECKER") where.createdBy = requesterId;
+    if (requester.role === "CHECKER") where.createdBy = requester.id;
     if (officerId) where.officerId = officerId;
 
     let list = await prisma.officerPenalty.findMany({
@@ -71,23 +69,20 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const requesterId = (body?.requesterId ?? "").trim();
+    const requesterIdParam = (body?.requesterId ?? "").trim();
     const officerId = (body?.officerId ?? "").trim() || null;
     const stampNo = (body?.stampNo ?? "").trim();
     const note = body?.note != null ? String(body.note).trim() : "";
     const count = Math.max(0, parseInt(String(body?.count ?? 0), 10) || 0);
     let color = (body?.color ?? "").trim() || null;
 
-    if (!requesterId || !stampNo) {
+    if (!requesterIdParam || !stampNo) {
       return NextResponse.json({ ok: false, error: "requesterId and stampNo required" }, { status: 400 });
     }
 
-    const requester = await prisma.user.findUnique({
-      where: { id: requesterId },
-      select: { role: true },
-    });
+    const requester = await getRequesterForRestrictedApi(req, requesterIdParam);
     if (!requester) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ ok: false, error: "Unauthorized or session expired" }, { status: 403 });
     }
     if (requester.role !== "CHECKER" && requester.role !== "SUPER_ADMIN") {
       return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
@@ -111,7 +106,7 @@ export async function POST(req: Request) {
     ];
     if (!color) {
       const existing = await prisma.officerPenalty.findMany({
-        where: requester.role === "CHECKER" ? { createdBy: requesterId } : {},
+        where: requester.role === "CHECKER" ? { createdBy: requester.id } : {},
         select: { color: true },
       });
       const used = new Set((existing.map((p) => p.color).filter(Boolean) as string[]).map((c) => c.toLowerCase()));
@@ -127,7 +122,7 @@ export async function POST(req: Request) {
         note: note || null,
         color,
         count,
-        createdBy: requesterId,
+        createdBy: requester.id,
       },
       include: {
         officer: { select: { id: true, fullName: true, role: true } },
@@ -136,7 +131,7 @@ export async function POST(req: Request) {
     });
 
     await logAudit({
-      actorId: requesterId,
+      actorId: requester.id,
       action: "PENALTY_CREATE",
       targetType: "OfficerPenalty",
       targetId: created.id,

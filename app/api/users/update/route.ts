@@ -79,7 +79,10 @@ export async function POST(req: Request) {
     if (fullName) data.fullName = fullName;
     if (phone) data.phone = phone;
     if (role) data.role = role;
-    if (typeof isActive === "boolean") data.isActive = isActive;
+    if (typeof isActive === "boolean") {
+      data.isActive = isActive;
+      if (isActive === true) data.differentDeviceLoginCount = 0;
+    }
     if (typeof mustChangePassword === "boolean") data.mustChangePassword = mustChangePassword;
     if (password) data.passwordHash = hashPassword(password);
     if (typeof forceChange === "boolean") data.mustChangePassword = forceChange;

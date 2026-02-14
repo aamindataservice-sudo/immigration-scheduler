@@ -36,7 +36,9 @@ model User {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   createdBy         String?
+  differentDeviceLoginCount Int @default(0) // different-device logins; at 5 user is deactivated
 
+  sessions          UserSession[]
   shifts            Shift[]
   vacationRequests  VacationRequest[]
   weeklyDayOff      WeeklyDayOffPattern[]
@@ -48,6 +50,20 @@ model User {
   privilege        UserPrivilege?
   officerPenalties OfficerPenalty[]  @relation("OfficerPenalties")
   createdPenalties OfficerPenalty[]  @relation("CreatedPenalties")
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  sessionToken String
+  deviceId     String?
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionToken])
+  @@index([userId])
+  @@index([userId, deviceId])
 }
 
 model Shift {

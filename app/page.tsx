@@ -24,6 +24,21 @@ export default function Home() {
   const [showSplash, setShowSplash] = useState(true);
   const [biometricState, setBiometricState] = useState<BiometricState>("idle");
   const [attemptCount, setAttemptCount] = useState(0);
+  // Different-device warning (officer/checker): show X/5 then continue
+  const [differentDeviceWarning, setDifferentDeviceWarning] = useState<{ count: number; redirect: () => void } | null>(null);
+
+  const getDeviceId = (): string => {
+    if (typeof window === "undefined") return "";
+    try {
+      const screenPart = `${window.screen?.width ?? 0}x${window.screen?.height ?? 0}`;
+      const tz = Intl.DateTimeFormat?.().resolvedOptions?.()?.timeZone ?? "";
+      const lang = navigator?.language ?? "";
+      const fingerprint = `fp-${screenPart}-${tz}-${lang}`;
+      return fingerprint;
+    } catch {
+      return "";
+    }
+  };
   
   // Check if installed as PWA (used for routing only)
   const isPWA = typeof window !== "undefined" && 
@@ -43,37 +58,37 @@ export default function Home() {
         const res = await fetch("/api/auth/biometric-login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: savedUser.phone }),
+          body: JSON.stringify({ phone: savedUser.phone, deviceId: getDeviceId() }),
         });
         const data = await res.json();
         if (!data.ok) {
-          if (res.status === 403 && (data.error === "Account is inactive" || data.error === "User inactive")) {
+          if (res.status === 403 && (data.error === "Account is inactive" || data.error === "User inactive" || data.error?.includes("deactivated"))) {
             try {
               localStorage.removeItem("currentUser");
               localStorage.removeItem("biometric_users");
+              localStorage.removeItem("sessionToken");
             } catch {}
             window.location.href = "https://etas.gov.so/";
             return false;
           }
-          // Random rejection type for fun
           setBiometricState(Math.random() > 0.5 ? "face_rejected" : "finger_rejected");
           setAttemptCount(prev => prev + 1);
           return false;
         }
+        if (data.sessionToken) try { localStorage.setItem("sessionToken", data.sessionToken); } catch {}
         setBiometricState("success");
         localStorage.setItem("currentUser", JSON.stringify(data.user));
-        setTimeout(() => {
-          if (data.user.role === "SUPER_ADMIN") {
-            router.push("/super-admin");
-          } else if (data.user.role === "ADMIN") {
-            router.push("/admin");
-          } else if (data.user.role === "OFFICER") {
-            router.push("/officer");
-          } else {
-            // For CHECKER or custom roles, route based on privileges
-            router.push("/dashboard");
-          }
-        }, 500);
+        const doRedirect = () => {
+          if (data.user.role === "SUPER_ADMIN") router.push("/super-admin");
+          else if (data.user.role === "ADMIN") router.push("/admin");
+          else if (data.user.role === "OFFICER") router.push("/officer");
+          else router.push("/dashboard");
+        };
+        if (data.warningCount != null && data.warningCount >= 1) {
+          setDifferentDeviceWarning({ count: data.warningCount, redirect: doRedirect });
+        } else {
+          setTimeout(doRedirect, 500);
+        }
         return true;
       }
     } catch (e) {
@@ -192,14 +207,15 @@ export default function Home() {
         const res = await fetch("/api/auth/biometric-login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: savedUser.phone }),
+          body: JSON.stringify({ phone: savedUser.phone, deviceId: getDeviceId() }),
         });
         const data = await res.json();
         if (!data.ok) {
-          if (res.status === 403 && (data.error === "Account is inactive" || data.error === "User inactive")) {
+          if (res.status === 403 && (data.error === "Account is inactive" || data.error === "User inactive" || data.error?.includes("deactivated"))) {
             try {
               localStorage.removeItem("currentUser");
               localStorage.removeItem("biometric_users");
+              localStorage.removeItem("sessionToken");
             } catch {}
             window.location.href = "https://etas.gov.so/";
             return;
@@ -208,16 +224,19 @@ export default function Home() {
           setBiometricState("error");
           return;
         }
+        if (data.sessionToken) try { localStorage.setItem("sessionToken", data.sessionToken); } catch {}
         setBiometricState("success");
         localStorage.setItem("currentUser", JSON.stringify(data.user));
-        if (data.user.role === "SUPER_ADMIN") {
-          router.push("/super-admin");
-        } else if (data.user.role === "ADMIN") {
-          router.push("/admin");
-        } else if (data.user.role === "OFFICER") {
-          router.push("/officer");
+        const doRedirect = () => {
+          if (data.user.role === "SUPER_ADMIN") router.push("/super-admin");
+          else if (data.user.role === "ADMIN") router.push("/admin");
+          else if (data.user.role === "OFFICER") router.push("/officer");
+          else router.push("/workspace");
+        };
+        if (data.warningCount != null && data.warningCount >= 1) {
+          setDifferentDeviceWarning({ count: data.warningCount, redirect: doRedirect });
         } else {
-          router.push("/workspace");
+          doRedirect();
         }
       }
     } catch { 
@@ -241,14 +260,15 @@ export default function Home() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, password }),
+        body: JSON.stringify({ phone, password, deviceId: getDeviceId() }),
       });
       const data = await res.json();
       if (!data.ok) {
-        if (res.status === 403 && data.error === "User inactive") {
+        if (res.status === 403 && (data.error === "User inactive" || data.error?.includes("deactivated"))) {
           try {
             localStorage.removeItem("currentUser");
             localStorage.removeItem("biometric_users");
+            localStorage.removeItem("sessionToken");
           } catch {}
           window.location.href = "https://etas.gov.so/";
           return;
@@ -256,17 +276,17 @@ export default function Home() {
         setError(data.error || "Login failed");
         return;
       }
+      if (data.sessionToken) try { localStorage.setItem("sessionToken", data.sessionToken); } catch {}
       localStorage.setItem("currentUser", JSON.stringify(data.user));
-      // Ask to save biometric after successful login
       if (biometricAvailable && !savedUsers.find(u => u.id === data.user.id) && !data.user.mustChangePassword) {
         if (confirm("Use your face or fingerprint to sign in next time?")) {
           await saveBiometric(data.user);
         }
       }
-      if (data.user.mustChangePassword) {
-        router.push("/change-password");
-      } else {
-        if (data.user.role === "SUPER_ADMIN") {
+      const doRedirect = () => {
+        if (data.user.mustChangePassword) {
+          router.push("/change-password");
+        } else if (data.user.role === "SUPER_ADMIN") {
           router.push("/super-admin");
         } else if (data.user.role === "ADMIN") {
           router.push("/admin");
@@ -275,6 +295,11 @@ export default function Home() {
         } else {
           router.push("/workspace");
         }
+      };
+      if (data.warningCount != null && data.warningCount >= 1) {
+        setDifferentDeviceWarning({ count: data.warningCount, redirect: doRedirect });
+      } else {
+        doRedirect();
       }
     } catch (err: any) {
       setError(err?.message ?? "Login failed");
@@ -319,6 +344,30 @@ export default function Home() {
       setBiometricState("idle");
     }
   };
+
+  // Different-device warning (officer/checker): show X/5 then continue
+  if (differentDeviceWarning) {
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, color: "#fff", textAlign: "center", zIndex: 9999 }}>
+        <div style={{ maxWidth: 360 }}>
+          <p style={{ fontSize: "1.1rem", marginBottom: 8 }}>⚠️ Different device login</p>
+          <p style={{ fontSize: "2rem", fontWeight: 700, margin: "16px 0" }}>
+            {differentDeviceWarning.count}/5
+          </p>
+          <p style={{ fontSize: "0.95rem", color: "#94a3b8", marginBottom: 24 }}>
+            After 5 different device logins your account will be deactivated. Only one session is allowed per user.
+          </p>
+          <button
+            type="button"
+            onClick={() => { differentDeviceWarning.redirect(); setDifferentDeviceWarning(null); }}
+            style={{ padding: "14px 28px", fontSize: "1rem", fontWeight: 600, borderRadius: 12, border: "none", background: "#0ea5e9", color: "#fff", cursor: "pointer" }}
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Splash screen with biometric
   if (showSplash && biometricAvailable && savedUsers.length > 0) {

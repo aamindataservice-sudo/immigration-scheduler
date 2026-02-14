@@ -1,22 +1,20 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getRequesterForRestrictedApi } from "@/lib/session";
 
 /** GET: Penalty audit history for checker (only their own PENALTY_* actions) */
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const requesterId = searchParams.get("requesterId") ?? "";
+    const requesterIdParam = searchParams.get("requesterId") ?? "";
 
-    if (!requesterId) {
+    if (!requesterIdParam) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
     }
 
-    const requester = await prisma.user.findUnique({
-      where: { id: requesterId },
-      select: { role: true },
-    });
+    const requester = await getRequesterForRestrictedApi(req, requesterIdParam);
     if (!requester) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ ok: false, error: "Unauthorized or session expired" }, { status: 403 });
     }
     if (requester.role !== "CHECKER" && requester.role !== "SUPER_ADMIN") {
       return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
@@ -24,7 +22,7 @@ export async function GET(req: Request) {
 
     const where =
       requester.role === "CHECKER"
-        ? { actorId: requesterId, action: { startsWith: "PENALTY_" } }
+        ? { actorId: requester.id, action: { startsWith: "PENALTY_" } }
         : { action: { startsWith: "PENALTY_" } };
 
     const logs = await prisma.auditLog.findMany({
@@ -44,18 +42,15 @@ export async function GET(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const requesterId = searchParams.get("requesterId") ?? "";
+    const requesterIdParam = searchParams.get("requesterId") ?? "";
 
-    if (!requesterId) {
+    if (!requesterIdParam) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
     }
 
-    const requester = await prisma.user.findUnique({
-      where: { id: requesterId },
-      select: { role: true },
-    });
+    const requester = await getRequesterForRestrictedApi(req, requesterIdParam);
     if (!requester) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ ok: false, error: "Unauthorized or session expired" }, { status: 403 });
     }
     if (requester.role !== "CHECKER" && requester.role !== "SUPER_ADMIN") {
       return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
@@ -63,7 +58,7 @@ export async function DELETE(req: Request) {
 
     const where =
       requester.role === "CHECKER"
-        ? { actorId: requesterId, action: { startsWith: "PENALTY_" } }
+        ? { actorId: requester.id, action: { startsWith: "PENALTY_" } }
         : { action: { startsWith: "PENALTY_" } };
 
     await prisma.auditLog.deleteMany({ where });

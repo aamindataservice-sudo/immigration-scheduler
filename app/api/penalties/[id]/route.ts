@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { getMogadishuTodayISO } from "@/lib/time";
+import { getRequesterForRestrictedApi } from "@/lib/session";
 
 /** PATCH: Update penalty (stampNo, note, or count delta). Body: requesterId, stampNo?, note?, countDelta? (+1, -1) or count? */
 export async function PATCH(
@@ -11,23 +12,20 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await req.json();
-    const requesterId = (body?.requesterId ?? "").trim();
+    const requesterIdParam = (body?.requesterId ?? "").trim();
     const stampNo = body?.stampNo != null ? String(body.stampNo).trim() : undefined;
     const note = body?.note !== undefined ? String(body.note).trim() : undefined;
     const color = body?.color !== undefined ? ((body.color ?? "").trim() || null) : undefined;
     const countDelta = body?.countDelta != null ? parseInt(String(body.countDelta), 10) : undefined;
     const count = body?.count != null ? Math.max(0, parseInt(String(body.count), 10) || 0) : undefined;
 
-    if (!requesterId || !id) {
+    if (!requesterIdParam || !id) {
       return NextResponse.json({ ok: false, error: "requesterId and id required" }, { status: 400 });
     }
 
-    const requester = await prisma.user.findUnique({
-      where: { id: requesterId },
-      select: { role: true },
-    });
+    const requester = await getRequesterForRestrictedApi(req, requesterIdParam);
     if (!requester) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ ok: false, error: "Unauthorized or session expired" }, { status: 403 });
     }
     if (requester.role !== "CHECKER" && requester.role !== "SUPER_ADMIN") {
       return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
@@ -40,7 +38,7 @@ export async function PATCH(
     if (!existing) {
       return NextResponse.json({ ok: false, error: "Penalty not found" }, { status: 404 });
     }
-    if (requester.role === "CHECKER" && existing.createdBy !== requesterId) {
+    if (requester.role === "CHECKER" && existing.createdBy !== requester.id) {
       return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
     }
 
@@ -85,7 +83,7 @@ export async function PATCH(
     });
 
     await logAudit({
-      actorId: requesterId,
+      actorId: requester.id,
       action: "PENALTY_UPDATE",
       targetType: "OfficerPenalty",
       targetId: id,
@@ -106,18 +104,15 @@ export async function DELETE(
   try {
     const { id } = await params;
     const { searchParams } = new URL(req.url);
-    const requesterId = searchParams.get("requesterId") ?? "";
+    const requesterIdParam = searchParams.get("requesterId") ?? "";
 
-    if (!requesterId || !id) {
+    if (!requesterIdParam || !id) {
       return NextResponse.json({ ok: false, error: "requesterId and id required" }, { status: 400 });
     }
 
-    const requester = await prisma.user.findUnique({
-      where: { id: requesterId },
-      select: { role: true },
-    });
+    const requester = await getRequesterForRestrictedApi(req, requesterIdParam);
     if (!requester) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ ok: false, error: "Unauthorized or session expired" }, { status: 403 });
     }
     if (requester.role !== "CHECKER" && requester.role !== "SUPER_ADMIN") {
       return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
@@ -130,14 +125,14 @@ export async function DELETE(
     if (!existing) {
       return NextResponse.json({ ok: false, error: "Penalty not found" }, { status: 404 });
     }
-    if (requester.role === "CHECKER" && existing.createdBy !== requesterId) {
+    if (requester.role === "CHECKER" && existing.createdBy !== requester.id) {
       return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
     }
 
     await prisma.officerPenalty.delete({ where: { id } });
 
     await logAudit({
-      actorId: requesterId,
+      actorId: requester.id,
       action: "PENALTY_DELETE",
       targetType: "OfficerPenalty",
       targetId: id,

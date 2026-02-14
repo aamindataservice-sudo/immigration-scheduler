@@ -15,7 +15,7 @@ class CheckerErrorBoundary extends Component<{ children: ReactNode }, { hasError
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, background: "#eef1f5", gap: 16 }}>
           <p style={{ margin: 0, fontSize: "1rem", color: "#374151", textAlign: "center" }}>Something went wrong. Try again or log out.</p>
           <button type="button" onClick={() => this.setState({ hasError: false })} style={{ padding: "12px 24px", borderRadius: 12, border: "none", background: "#2563eb", color: "#fff", fontWeight: 600, cursor: "pointer" }}>Try again</button>
-          <button type="button" onClick={() => { localStorage.removeItem("currentUser"); window.location.href = "/"; }} style={{ padding: "12px 24px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff", color: "#374151", cursor: "pointer" }}>Log out</button>
+          <button type="button" onClick={() => { localStorage.removeItem("currentUser"); localStorage.removeItem("sessionToken"); window.location.href = "/"; }} style={{ padding: "12px 24px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff", color: "#374151", cursor: "pointer" }}>Log out</button>
         </div>
       );
     }
@@ -419,6 +419,7 @@ export default function WorkspacePage() {
 
   const logout = () => {
     localStorage.removeItem("currentUser");
+    localStorage.removeItem("sessionToken");
     router.push("/");
   };
 

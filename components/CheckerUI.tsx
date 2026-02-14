@@ -103,6 +103,16 @@ function extractReferenceFromQrContent(text: string): string | null {
   }
 }
 
+function getSessionHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const t = localStorage.getItem("sessionToken");
+    return t ? { "X-Session-Token": t } : {};
+  } catch {
+    return {};
+  }
+}
+
 export default function CheckerUI({ user, initialView, hideBackToMenu = false }: CheckerUIProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -187,7 +197,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
     try {
       const res = await fetch(`/api/penalties/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getSessionHeaders() },
         body: JSON.stringify({ requesterId: user.id, count: 0 }),
       });
       const data = await res.json();
@@ -213,7 +223,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
       })
       .catch(() => {});
     const t = setTimeout(() => {
-      fetch(`/api/penalties/count?requesterId=${user.id}`)
+      fetch(`/api/penalties/count?requesterId=${user.id}`, { headers: getSessionHeaders() })
         .then((r) => r.json())
         .then((data) => {
           if (data.ok && typeof data.count === "number") setPenaltyCountTotal(data.count);
@@ -483,14 +493,14 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
 
   const loadOfficers = () => {
     if (!user?.id) return;
-    fetch(`/api/penalties/officers?requesterId=${user.id}`)
+    fetch(`/api/penalties/officers?requesterId=${user.id}`, { headers: getSessionHeaders() })
       .then((r) => r.json())
       .then((d) => { if (d.ok && Array.isArray(d.officers)) setOfficers(d.officers); });
   };
 
   const loadPenalties = () => {
     if (!user?.id) return;
-    fetch(`/api/penalties?requesterId=${user.id}`)
+    fetch(`/api/penalties?requesterId=${user.id}`, { headers: getSessionHeaders() })
       .then((r) => r.json())
       .then((d) => {
         if (d.ok && Array.isArray(d.list)) {
@@ -503,7 +513,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
 
   const loadPenaltyAudit = () => {
     if (!user?.id) return;
-    fetch(`/api/penalties/audit?requesterId=${user.id}`)
+    fetch(`/api/penalties/audit?requesterId=${user.id}`, { headers: getSessionHeaders() })
       .then((r) => r.json())
       .then((d) => {
         if (d.ok && Array.isArray(d.logs)) setPenaltyAuditLogs(d.logs);
@@ -512,7 +522,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
 
   const loadPenaltyHistory = () => {
     if (!user?.id) return;
-    fetch(`/api/penalties/history?requesterId=${user.id}`)
+    fetch(`/api/penalties/history?requesterId=${user.id}`, { headers: getSessionHeaders() })
       .then((r) => r.json())
       .then((d) => {
         if (d.ok && Array.isArray(d.snapshots)) setPenaltyHistory(d.snapshots);
@@ -545,7 +555,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
     try {
       const res = await fetch("/api/penalties", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getSessionHeaders() },
         body: JSON.stringify({
           requesterId: user.id,
           officerId: penaltyOfficerId || undefined,
@@ -581,7 +591,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
     try {
       const res = await fetch(`/api/penalties/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getSessionHeaders() },
         body: JSON.stringify({ requesterId: user.id, countDelta: delta }),
       });
       const data = await res.json();
@@ -600,7 +610,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
     try {
       const res = await fetch(`/api/penalties/${penaltyEditingId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getSessionHeaders() },
         body: JSON.stringify({
           requesterId: user.id,
           stampNo: penaltyEditStampNo,
@@ -626,7 +636,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
   const deletePenalty = async (id: string) => {
     if (!user?.id || !confirm("Delete this stamp?")) return;
     try {
-      const res = await fetch(`/api/penalties/${id}?requesterId=${user.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/penalties/${id}?requesterId=${user.id}`, { method: "DELETE", headers: getSessionHeaders() });
       const data = await res.json();
       if (data.ok) {
         setMessage("✅ Deleted");
@@ -642,7 +652,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
   const clearPenaltyAudit = async () => {
     if (!user?.id || !confirm("Clear all penalty audit history? This cannot be undone.")) return;
     try {
-      const res = await fetch(`/api/penalties/audit?requesterId=${user.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/penalties/audit?requesterId=${user.id}`, { method: "DELETE", headers: getSessionHeaders() });
       const data = await res.json();
       if (data.ok) {
         setMessage("✅ Audit history cleared");
@@ -654,7 +664,7 @@ export default function CheckerUI({ user, initialView, hideBackToMenu = false }:
   };
 
   const logout = () => {
-    localStorage.removeItem("currentUser");
+    localStorage.removeItem("currentUser"); localStorage.removeItem("sessionToken");
     router.push("/");
   };
 

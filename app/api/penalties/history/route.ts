@@ -1,30 +1,28 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getRequesterForRestrictedApi } from "@/lib/session";
 
 /** GET: Previous daily history (snapshots) for checker's penalties. Query: requesterId, penaltyId? (optional, else all) */
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const requesterId = searchParams.get("requesterId") ?? "";
+    const requesterIdParam = searchParams.get("requesterId") ?? "";
     const penaltyId = searchParams.get("penaltyId") ?? "";
 
-    if (!requesterId) {
+    if (!requesterIdParam) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
     }
 
-    const requester = await prisma.user.findUnique({
-      where: { id: requesterId },
-      select: { role: true },
-    });
+    const requester = await getRequesterForRestrictedApi(req, requesterIdParam);
     if (!requester) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ ok: false, error: "Unauthorized or session expired" }, { status: 403 });
     }
     if (requester.role !== "CHECKER" && requester.role !== "SUPER_ADMIN") {
       return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
     }
 
     const penaltyWhere = requester.role === "CHECKER"
-      ? { createdBy: requesterId, ...(penaltyId ? { id: penaltyId } : {}) }
+      ? { createdBy: requester.id, ...(penaltyId ? { id: penaltyId } : {}) }
       : penaltyId ? { id: penaltyId } : {};
 
     const snapshots = await prisma.penaltyDaySnapshot.findMany({
